@@ -20,7 +20,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 class RSSReportGenerator:
     """RSS 报告生成器"""
     
-    def __init__(self, config_path: str = "../config.yaml"):
+    def __init__(self, config_path: str = "config.yaml"):
         """初始化生成器"""
         self.config = self._load_config(config_path)
         self.client = self._authenticate_google_sheets()
@@ -74,12 +74,13 @@ class RSSReportGenerator:
         
         # 尝试多种日期格式
         formats = [
+            '%m/%d/%Y %H:%M:%S',  # 10/29/2025 0:58:55 - 你的格式！
+            '%m/%d/%Y %H:%M',     # 8/12/2025 10:30
             '%m/%d/%Y',           # 8/12/2025
+            '%Y-%m-%d %H:%M:%S',  # 2025-08-12 10:30:45
+            '%Y-%m-%d %H:%M',     # 2025-08-12 10:30
             '%Y-%m-%d',           # 2025-08-12
             '%Y/%m/%d',           # 2025/08/12
-            '%m/%d/%Y %H:%M',     # 8/12/2025 10:30
-            '%Y-%m-%d %H:%M',     # 2025-08-12 10:30
-            '%Y-%m-%d %H:%M:%S',  # 2025-08-12 10:30:45
         ]
         
         for fmt in formats:
