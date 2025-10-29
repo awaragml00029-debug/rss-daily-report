@@ -15,18 +15,93 @@ columns:
   publish_time: 8    # H列 - 发布时间
   author: 9          # I列 - 作者
 
-# 筛选关键词（支持正则表达式）
+# 筛选关键词（支持正则表达式，中英文都匹配）
 keywords:
+  # === 肿瘤相关 ===
   - "肿瘤"
+  - "癌症"
+  - "tumor"
+  - "cancer"
+  - "oncology"
+  - "carcinoma"
+  - "leukemia"
+  - "lymphoma"
+
+  # === 测序技术 ===
   - "测序"
+  - "sequencing"
+  - "RNA-seq"
+  - "RNAseq"
+  - "DNA-seq"
+  - "ChIP-seq"
+  - "ATAC-seq"
+  - "Hi-C"
+
+  # === 单细胞 ===
   - "单细胞"
-  - "R包"
+  - "single.cell"
+  - "single-cell"
+  - "scRNA"
+  - "scDNA"
+  - "scATAC"
+  - "10x"
+
+  # === 空间组学 ===
   - "空间转录组"
-  - "生物信息"
+  - "空间组学"
+  - "spatial"
+  - "spatially"
+  - "Visium"
+  - "spatial transcriptomics"
+
+  # === 组学 ===
   - "基因组"
-  - "蛋白质组"
   - "转录组"
+  - "蛋白质组"
+  - "代谢组"
+  - "genome"
+  - "genomics"
+  - "transcriptome"
+  - "transcriptomics"
+  - "proteome"
+  - "proteomics"
+  - "metabolome"
+  - "metabolomics"
+
+  # === 生物信息 ===
+  - "生物信息"
+  - "生信"
+  - "bioinformatics"
+  - "computational biology"
+
+  # === R语言/工具 ===
+  - "R包"
+  - "R package"
+  - "Bioconductor"
+  - "Seurat"
+  - "Scanpy"
+
+  # === 表观遗传 ===
   - "表观遗传"
+  - "表观基因组"
+  - "epigenetic"
+  - "epigenome"
+  - "methylation"
+  - "甲基化"
+  - "histone"
+  - "组蛋白"
+
+  # === 分析方法 ===
+  - "differential expression"
+  - "差异表达"
+  - "pathway"
+  - "通路"
+  - "enrichment"
+  - "富集"
+  - "clustering"
+  - "聚类"
+  - "trajectory"
+  - "轨迹"
 
 # 排除关键词（可选，在标题中出现这些词会被过滤）
 exclude_keywords:
