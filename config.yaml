@@ -1,0 +1,60 @@
+# Google Sheets 配置
+google_sheets:
+  spreadsheet_id: "your-spreadsheet-id-here"  # 替换为你的 Sheet ID
+  sheet_name: "Sheet1"  # 替换为你的工作表名称
+  
+# 列索引映射（从1开始，对应 A=1, B=2...）
+columns:
+  crawl_time: 1      # A列 - 抓取时间
+  attribute: 2       # B列 - 属性
+  source_name: 3     # C列 - 适名称
+  category: 4        # D列 - 适分类
+  title: 5           # E列 - 标题
+  link: 6            # F列 - 链接
+  publish_time: 7    # G列 - 发布时间
+  author: 8          # H列 - 作者
+
+# 筛选关键词（支持正则表达式）
+keywords:
+  - "肿瘤"
+  - "测序"
+  - "单细胞"
+  - "R包"
+  - "空间转录组"
+  - "生物信息"
+  - "基因组"
+  - "蛋白质组"
+  - "转录组"
+  - "表观遗传"
+
+# 排除关键词（可选，在标题中出现这些词会被过滤）
+exclude_keywords:
+  - "广告"
+  - "推广"
+  - "招聘"
+  - "培训班"
+
+# 输出配置
+output:
+  daily_path: "reports/{year}/{month}"
+  daily_filename: "daily-{date}.md"
+  monthly_path: "reports/{year}"
+  monthly_filename: "monthly-{year}-{month}.md"
+  
+# 月报生成配置
+monthly_report:
+  enabled: true
+  # 在每月最后一天生成（2月按28天）
+  generation_days:
+    "01": 31  # 1月
+    "02": 28  # 2月
+    "03": 31  # 3月
+    "04": 30  # 4月
+    "05": 31  # 5月
+    "06": 30  # 6月
+    "07": 31  # 7月
+    "08": 31  # 8月
+    "09": 30  # 9月
+    "10": 31  # 10月
+    "11": 30  # 11月
+    "12": 31  # 12月

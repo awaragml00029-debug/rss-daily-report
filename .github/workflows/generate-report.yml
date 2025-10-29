@@ -1,0 +1,149 @@
+name: Generate Daily Report
+
+on:
+  # 每天 23:00 (北京时间) = 15:00 UTC 运行
+  schedule:
+    - cron: '0 15 * * *'
+  
+  # 每月最后一天额外运行月报（在 23:30 UTC = 07:30 北京时间第二天）
+  # 注意：对于不同月份的最后一天，需要分别配置
+  # 这里简化处理，在每月28-31号都尝试生成月报
+  
+  # 允许手动触发
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '生成模式 (daily/monthly)'
+        required: true
+        default: 'daily'
+        type: choice
+        options:
+          - daily
+          - monthly
+      date:
+        description: '指定日期 (YYYY-MM-DD，仅用于 daily 模式)'
+        required: false
+      year:
+        description: '指定年份（仅用于 monthly 模式）'
+        required: false
+      month:
+        description: '指定月份（仅用于 monthly 模式）'
+        required: false
+
+jobs:
+  generate-daily-report:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'daily')
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Generate Daily Report
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+        run: |
+          cd scripts
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python generate_report.py --mode daily --date "${{ github.event.inputs.date }}"
+          else
+            python generate_report.py --mode daily
+          fi
+      
+      - name: Commit and Push
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add reports/
+          git diff --staged --quiet || git commit -m "📝 Daily report $(date +%Y-%m-%d)"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  generate-monthly-report:
+    runs-on: ubuntu-latest
+    # 每月28-31号运行，或手动触发 monthly 模式
+    if: |
+      (github.event_name == 'schedule' && 
+       (github.event.schedule == '0 15 28 * *' || 
+        github.event.schedule == '0 15 29 * *' || 
+        github.event.schedule == '0 15 30 * *' || 
+        github.event.schedule == '0 15 31 * *')) ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'monthly')
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Check if Last Day of Month
+        id: check_date
+        run: |
+          # 获取当前日期
+          current_day=$(date +%d)
+          current_month=$(date +%m)
+          current_year=$(date +%Y)
+          
+          # 获取下个月的第一天，然后减一天，得到当月最后一天
+          next_month=$(date -d "$(date +%Y-%m-01) +1 month" +%Y-%m-01)
+          last_day=$(date -d "$next_month -1 day" +%d)
+          
+          echo "current_day=$current_day"
+          echo "last_day=$last_day"
+          
+          # 判断是否是最后一天
+          if [ "$current_day" == "$last_day" ]; then
+            echo "is_last_day=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_last_day=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Generate Monthly Report
+        if: steps.check_date.outputs.is_last_day == 'true' || github.event_name == 'workflow_dispatch'
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+        run: |
+          cd scripts
+          if [ -n "${{ github.event.inputs.year }}" ] && [ -n "${{ github.event.inputs.month }}" ]; then
+            python generate_report.py --mode monthly --year "${{ github.event.inputs.year }}" --month "${{ github.event.inputs.month }}"
+          else
+            python generate_report.py --mode monthly
+          fi
+      
+      - name: Commit and Push
+        if: steps.check_date.outputs.is_last_day == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add reports/
+          git diff --staged --quiet || git commit -m "📊 Monthly report $(date +%Y-%m)"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

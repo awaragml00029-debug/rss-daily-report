@@ -1,0 +1,88 @@
+# RSS Daily Report 配置文件示例
+# 复制此文件为 config.yaml 并根据实际情况修改
+
+# Google Sheets 配置
+google_sheets:
+  # Spreadsheet ID 从 URL 中获取
+  # https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit
+  spreadsheet_id: "YOUR_SPREADSHEET_ID"
+  
+  # 工作表名称（默认为 Sheet1）
+  sheet_name: "Sheet1"
+
+# 筛选关键词（支持正则表达式）
+keywords:
+  # 生物信息学基础
+  - "测序"
+  - "基因组"
+  - "转录组"
+  - "蛋白质组"
+  - "代谢组"
+  
+  # 技术类型
+  - "单细胞"
+  - "空间转录组"
+  - "空间组学"
+  - "scRNA-seq"
+  - "10x Genomics"
+  - "Visium"
+  
+  # 疾病研究
+  - "肿瘤"
+  - "癌症"
+  - "免疫"
+  - "神经"
+  - "心血管"
+  
+  # 技术工具
+  - "R包"
+  - "Python"
+  - "Bioconductor"
+  - "Seurat"
+  - "Scanpy"
+  - "CellRanger"
+  
+  # 分析方法
+  - "差异表达"
+  - "细胞类型鉴定"
+  - "轨迹分析"
+  - "拟时序"
+  - "细胞通讯"
+  - "基因调控网络"
+  
+  # 正则表达式示例
+  - "RNA-?seq"              # 匹配 RNA-seq 或 RNAseq
+  - "单细胞.*测序"           # 匹配 "单细胞测序"、"单细胞转录组测序" 等
+  - "ATAC-?seq"             # 匹配 ATAC-seq 或 ATACseq
+  - "ChIP-?seq"             # 匹配 ChIP-seq 或 ChIPseq
+  - "肿瘤|癌症"              # 匹配 "肿瘤" 或 "癌症"
+
+# 排除关键词（可选）
+exclude_keywords:
+  - "广告"
+  - "推广"
+  - "招聘"
+  - "征稿"
+  - "培训班"
+  - "课程"
+
+# 输出配置
+output:
+  # 日报路径：reports/2025/10/daily-2025-10-29.md
+  daily_path: "reports/{year}/{month}"
+  daily_filename: "daily-{date}.md"
+  
+  # 月报路径：reports/2025/monthly-2025-10.md
+  monthly_path: "reports/{year}"
+  monthly_filename: "monthly-{year}-{month}.md"
+
+# 月报配置
+monthly_report:
+  # 是否启用月报功能
+  enabled: true
+  
+  # 每月生成月报的日期（30号）
+  generation_day: 30
+  
+  # 2月生成月报的日期（28号）
+  february_day: 28
