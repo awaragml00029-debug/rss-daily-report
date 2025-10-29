@@ -9,12 +9,21 @@ RSS Daily Report Generator
 import os
 import re
 import sys
+import time
 from datetime import datetime, timedelta
 from collections import Counter
 from typing import List, Dict, Any, Optional
 import yaml
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+
+# Gemini AI 支持
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+    print("警告: google-generativeai 未安装，AI总结功能将被禁用", file=sys.stderr)
 
 
 class RSSReportGenerator:
@@ -25,6 +34,11 @@ class RSSReportGenerator:
         self.config = self._load_config(config_path)
         self.client = self._authenticate_google_sheets()
         self.sheet = None
+        self.gemini_enabled = False
+        self.gemini_model = None
+
+        # 初始化 Gemini AI
+        self._init_gemini()
         
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """加载配置文件"""
@@ -65,7 +79,159 @@ class RSSReportGenerator:
             creds_dict, scope
         )
         return gspread.authorize(credentials)
-    
+
+    def _init_gemini(self):
+        """初始化 Gemini AI"""
+        if not GEMINI_AVAILABLE:
+            print("⚠️  Gemini AI 不可用（未安装 google-generativeai）")
+            return
+
+        gemini_config = self.config.get('gemini', {})
+
+        # 检查是否启用
+        if not gemini_config.get('enabled', False):
+            print("ℹ️  Gemini AI 总结功能已禁用")
+            return
+
+        # 获取 API Key
+        api_key = os.getenv('GEMINI_API_KEY')
+        if not api_key:
+            print("⚠️  未找到 GEMINI_API_KEY 环境变量，AI总结功能将被禁用")
+            return
+
+        try:
+            # 配置 Gemini
+            genai.configure(api_key=api_key)
+
+            # 获取自定义 API URL（如果有）
+            api_url = gemini_config.get('api_url')
+            if api_url:
+                # 注意：google-generativeai 库可能不直接支持自定义 URL
+                # 这里我们记录配置，实际调用时可能需要直接使用 requests
+                self.gemini_api_url = api_url
+                print(f"🔧 使用自定义 Gemini API URL: {api_url}")
+            else:
+                self.gemini_api_url = None
+
+            # 创建模型实例
+            model_name = gemini_config.get('model', 'gemini-2.5-flash-lite')
+            self.gemini_model = genai.GenerativeModel(model_name)
+            self.gemini_enabled = True
+
+            print(f"✅ Gemini AI 已初始化 (模型: {model_name})")
+
+        except Exception as e:
+            print(f"⚠️  Gemini AI 初始化失败: {str(e)}")
+            self.gemini_enabled = False
+
+    def _call_gemini_api(self, prompt: str, retry_count: int = 2) -> Optional[str]:
+        """
+        调用 Gemini API 生成内容
+
+        Args:
+            prompt: 提示词
+            retry_count: 重试次数
+
+        Returns:
+            生成的文本，失败返回 None
+        """
+        if not self.gemini_enabled or not self.gemini_model:
+            return None
+
+        gemini_config = self.config.get('gemini', {})
+
+        for attempt in range(retry_count + 1):
+            try:
+                # 配置生成参数
+                generation_config = {
+                    'temperature': gemini_config.get('temperature', 0.7),
+                    'max_output_tokens': gemini_config.get('max_tokens', 1000),
+                }
+
+                # 调用 API
+                response = self.gemini_model.generate_content(
+                    prompt,
+                    generation_config=generation_config
+                )
+
+                # 检查响应
+                if response and response.text:
+                    return response.text.strip()
+                else:
+                    print(f"⚠️  Gemini API 返回空响应 (尝试 {attempt + 1}/{retry_count + 1})")
+
+            except Exception as e:
+                print(f"⚠️  Gemini API 调用失败 (尝试 {attempt + 1}/{retry_count + 1}): {str(e)}")
+
+                # 如果不是最后一次尝试，等待后重试
+                if attempt < retry_count:
+                    time.sleep(2 ** attempt)  # 指数退避：1秒、2秒
+
+        return None
+
+    def generate_ai_summary_for_source(
+        self,
+        source_name: str,
+        items: List[Dict[str, Any]]
+    ) -> Optional[str]:
+        """
+        为特定来源生成 AI 总结
+
+        Args:
+            source_name: 来源名称
+            items: 该来源的文章列表
+
+        Returns:
+            AI 生成的总结，失败返回 None
+        """
+        if not self.gemini_enabled:
+            return None
+
+        gemini_config = self.config.get('gemini', {})
+        max_items = gemini_config.get('max_items_per_source', 20)
+
+        # 限制条目数量（控制成本）
+        items_to_summarize = items[:max_items]
+
+        if not items_to_summarize:
+            return None
+
+        # 构建文章列表文本
+        articles_text = ""
+        for idx, item in enumerate(items_to_summarize, 1):
+            title = item.get('title', '').strip()
+            description = item.get('description', '').strip()
+
+            # 截断描述（避免太长）
+            if description and len(description) > 200:
+                description = description[:200] + "..."
+
+            articles_text += f"\n{idx}. 标题：{title}\n"
+            if description:
+                articles_text += f"   摘要：{description}\n"
+
+        # 获取提示词模板
+        prompt_template = gemini_config.get('prompt_template', '')
+        if not prompt_template:
+            return None
+
+        # 填充模板
+        prompt = prompt_template.format(
+            source_name=source_name,
+            articles=articles_text
+        )
+
+        # 调用 API
+        print(f"🤖 正在为 {source_name} 生成 AI 总结...")
+        summary = self._call_gemini_api(prompt)
+
+        if summary:
+            print(f"✅ {source_name} AI 总结生成成功")
+        else:
+            print(f"⚠️  {source_name} AI 总结生成失败")
+
+        return summary
+
     def connect_sheet(self) -> gspread.Worksheet:
         """连接到指定的 Google Sheet"""
         spreadsheet_id = os.getenv('SHEET_ID') or self.config['google_sheets']['spreadsheet_id']
@@ -301,7 +467,33 @@ class RSSReportGenerator:
         md_lines.append("")
         md_lines.append("---")
         md_lines.append("")
-        
+
+        # ===== AI 智能总结 =====
+        if self.gemini_enabled:
+            md_lines.append("## 🤖 今日AI智能总结")
+            md_lines.append("")
+
+            ai_summary_generated = False
+
+            for (display_name, sort_order, icon), source_items in sorted_sources:
+                # 为每个来源生成 AI 总结
+                summary = self.generate_ai_summary_for_source(display_name, source_items)
+
+                if summary:
+                    ai_summary_generated = True
+                    md_lines.append(f"### {icon} {display_name}")
+                    md_lines.append("")
+                    md_lines.append(f"> {summary}")
+                    md_lines.append("")
+
+            # 如果没有生成任何总结，则显示提示信息
+            if not ai_summary_generated:
+                md_lines.append("> ℹ️  今日暂无AI总结")
+                md_lines.append("")
+
+            md_lines.append("---")
+            md_lines.append("")
+
         # ===== 分类浏览 =====
         md_lines.append("## 📚 分类浏览")
         md_lines.append("")

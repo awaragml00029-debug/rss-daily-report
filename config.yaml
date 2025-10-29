@@ -162,3 +162,37 @@ monthly_report:
     "10": 31  # 10月
     "11": 30  # 11月
     "12": 31  # 12月
+
+# Gemini AI 配置（用于生成智能总结）
+gemini:
+  enabled: true                              # 是否启用AI总结功能
+  api_url: "https://generativelanguage.googleapis.com/v1beta/models"  # API基础URL（支持自定义）
+  model: "gemini-2.5-flash-lite"             # 使用的模型
+  temperature: 0.7                            # 生成温度（0-1，越高越有创意）
+  max_tokens: 1000                            # 每次总结的最大token数
+  language: "zh-CN"                           # 输出语言
+  max_items_per_source: 20                    # 每个来源最多发送的条目数（控制成本）
+
+  # AI 总结提示词模板
+  prompt_template: |
+    你是一个生物信息学领域的专家。请根据以下来自"{source_name}"的文章列表，生成一份结构化的中文总结。
+
+    文章列表：
+    {articles}
+
+    请按照以下格式生成总结：
+
+    **主要研究方向**：
+    - [列出2-3个主要研究方向]
+
+    **重点关注**：
+    - [列出2-3个最值得关注的研究或技术]
+
+    **技术趋势**：
+    - [总结1-2个技术发展趋势]
+
+    要求：
+    1. 总结要简洁、专业，突出重点
+    2. 使用生物信息学专业术语
+    3. 不要使用过度夸张的词汇
+    4. 总长度控制在200-300字
