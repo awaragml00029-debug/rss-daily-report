@@ -61,6 +61,7 @@ jobs:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}  # 👈 添加这行
+          GEMINI_API_URL: ${{ secrets.GEMINI_API_URL }}
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then
             python scripts/generate_report.py --mode daily --date "${{ github.event.inputs.date }}"
@@ -139,6 +140,7 @@ jobs:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}  # 👈 添加这行
+          GEMINI_API_URL: ${{ secrets.GEMINI_API_URL }}
         run: |
           if [ -n "${{ github.event.inputs.year }}" ] && [ -n "${{ github.event.inputs.month }}" ]; then
             python scripts/generate_report.py --mode monthly --year "${{ github.event.inputs.year }}" --month "${{ github.event.inputs.month }}"
