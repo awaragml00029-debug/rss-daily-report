@@ -149,6 +149,18 @@ class RSSReportGenerator:
         col_map = self.config['columns']
         filtered_items = []
         
+        # 调试计数器
+        debug_counts = {
+            'total_rows': len(data) - 1,
+            'parsed_dates': 0,
+            'matched_dates': 0,
+            'matched_keywords': 0,
+        }
+        
+        # 只显示前3个样本用于调试
+        sample_count = 0
+        max_samples = 3
+        
         for row in data[1:]:  # 跳过表头
             if len(row) < 8:  # 确保有足够的列
                 continue
@@ -160,16 +172,36 @@ class RSSReportGenerator:
             if not crawl_time:
                 continue
             
+            debug_counts['parsed_dates'] += 1
+            
+            # 显示前几个样本
+            if sample_count < max_samples:
+                print(f"📝 样本 {sample_count + 1}:")
+                print(f"   抓取时间: {crawl_time_str} -> {crawl_time}")
+                print(f"   目标日期: {target_date.date()}")
+                print(f"   匹配结果: {crawl_time.date() == target_date.date()}")
+                sample_count += 1
+            
             # 检查是否为目标日期（只比较年月日）
             if crawl_time.date() != target_date.date():
                 continue
+            
+            debug_counts['matched_dates'] += 1
             
             # 获取标题并进行关键词匹配
             title = row[col_map['title'] - 1]
             matched_keywords = self.filter_by_keywords(title)
             
+            # 显示匹配到的日期但未匹配关键词的前几个
+            if not matched_keywords and debug_counts['matched_dates'] <= 3:
+                print(f"🔍 日期匹配但关键词未匹配:")
+                print(f"   标题: {title[:100]}")
+                print(f"   关键词: {self.config.get('keywords', [])}")
+            
             if not matched_keywords:  # 没有匹配的关键词，跳过
                 continue
+            
+            debug_counts['matched_keywords'] += 1
             
             # 构建数据项
             item = {
@@ -184,6 +216,13 @@ class RSSReportGenerator:
                 'matched_keywords': matched_keywords,
             }
             filtered_items.append(item)
+        
+        # 输出调试统计
+        print(f"\n📊 筛选统计:")
+        print(f"   总行数: {debug_counts['total_rows']}")
+        print(f"   成功解析日期: {debug_counts['parsed_dates']}")
+        print(f"   日期匹配: {debug_counts['matched_dates']}")
+        print(f"   关键词匹配: {debug_counts['matched_keywords']}")
         
         return filtered_items
     
