@@ -8,99 +8,25 @@ columns:
   crawl_time: 1      # A列 - 抓取时间
   attribute: 2       # B列 - 属性
   source_name: 3     # C列 - 适名称
-  category: 4        # D列 - 适分类
+  category: 4        # D列 - 适分类（用于分类识别）
   title: 5           # E列 - 标题
   link: 6            # F列 - 链接
-  publish_time: 7    # G列 - 发布时间
-  author: 8          # H列 - 作者
+  description: 7     # G列 - 描述/摘要
+  publish_time: 8    # H列 - 发布时间
+  author: 9          # I列 - 作者
 
-# 筛选关键词（支持正则表达式，中英文都匹配）
+# 筛选关键词（支持正则表达式）
 keywords:
-  # === 肿瘤相关 ===
   - "肿瘤"
-  - "癌症"
-  - "tumor"
-  - "cancer"
-  - "oncology"
-  - "carcinoma"
-  - "leukemia"
-  - "lymphoma"
-  
-  # === 测序技术 ===
   - "测序"
-  - "sequencing"
-  - "RNA-seq"
-  - "RNAseq"
-  - "DNA-seq"
-  - "ChIP-seq"
-  - "ATAC-seq"
-  - "Hi-C"
-  
-  # === 单细胞 ===
   - "单细胞"
-  - "single.cell"
-  - "single-cell"
-  - "scRNA"
-  - "scDNA"
-  - "scATAC"
-  - "10x"
-  
-  # === 空间组学 ===
-  - "空间转录组"
-  - "空间组学"
-  - "spatial"
-  - "spatially"
-  - "Visium"
-  - "spatial transcriptomics"
-  
-  # === 组学 ===
-  - "基因组"
-  - "转录组"
-  - "蛋白质组"
-  - "代谢组"
-  - "genome"
-  - "genomics"
-  - "transcriptome"
-  - "transcriptomics"
-  - "proteome"
-  - "proteomics"
-  - "metabolome"
-  - "metabolomics"
-  
-  # === 生物信息 ===
-  - "生物信息"
-  - "生信"
-  - "bioinformatics"
-  - "computational biology"
-  
-  # === R语言/工具 ===
   - "R包"
-  - "R package"
-  - "Bioconductor"
-  - "Seurat"
-  - "Scanpy"
-  
-  # === 表观遗传 ===
+  - "空间转录组"
+  - "生物信息"
+  - "基因组"
+  - "蛋白质组"
+  - "转录组"
   - "表观遗传"
-  - "表观基因组"
-  - "epigenetic"
-  - "epigenome"
-  - "methylation"
-  - "甲基化"
-  - "histone"
-  - "组蛋白"
-  
-  # === 分析方法 ===
-  - "differential expression"
-  - "差异表达"
-  - "pathway"
-  - "通路"
-  - "enrichment"
-  - "富集"
-  - "clustering"
-  - "聚类"
-  - "trajectory"
-  - "轨迹"
 
 # 排除关键词（可选，在标题中出现这些词会被过滤）
 exclude_keywords:
@@ -108,8 +34,34 @@ exclude_keywords:
   - "推广"
   - "招聘"
   - "培训班"
-  - "advertisement"
-  - "hiring"
+
+# 来源分类映射配置
+# 格式：标识: [显示名称, 排序, 图标, 描述字段列索引（可选）]
+source_mapping:
+  mpRss: ["公众号", 1, "📰"]
+  Database: ["GEO", 2, "🧬"]
+  xmol: ["X-MOL", 3, "🔬"]
+  Rcoding: ["R-blogs", 4, "📊"]
+  RnaSeq: ["测序类博客", 5, "🧪"]
+  
+  # 后续可继续添加新的来源分类
+  # Pubmed: ["PubMed", 6, "📚"]
+  # Nature: ["Nature系列", 7, "🔬"]
+  # Arxiv: ["arXiv预印本", 8, "📄"]
+  
+  # 未定义的来源会归入这里
+  _default: ["其他来源", 99, "📁"]
+
+# 报告格式配置
+report_format:
+  # 每个来源分类显示的详细条目数（前N条）
+  detail_items_per_source: 10
+  
+  # 描述字段最大长度（字符数，0表示不限制）
+  description_max_length: 500
+  
+  # 是否在"更多内容"区域显示未展开的条目
+  show_more_section: true
 
 # 输出配置
 output:
