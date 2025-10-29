@@ -1,5 +1,9 @@
 name: Generate Daily Report
 
+# 添加权限声明
+permissions:
+  contents: write  # 允许推送代码
+
 on:
   # 每天 23:00 (北京时间) = 15:00 UTC 运行
   schedule:
@@ -57,11 +61,10 @@ jobs:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
         run: |
-          cd scripts
           if [ -n "${{ github.event.inputs.date }}" ]; then
-            python generate_report.py --mode daily --date "${{ github.event.inputs.date }}"
+            python scripts/generate_report.py --mode daily --date "${{ github.event.inputs.date }}"
           else
-            python generate_report.py --mode daily
+            python scripts/generate_report.py --mode daily
           fi
       
       - name: Commit and Push
@@ -69,8 +72,13 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           git add reports/
-          git diff --staged --quiet || git commit -m "📝 Daily report $(date +%Y-%m-%d)"
-          git push
+          if git diff --staged --quiet; then
+            echo "没有变化，跳过提交"
+          else
+            git commit -m "📝 Daily report $(date +%Y-%m-%d)"
+            git push
+            echo "报告已提交并推送"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   
@@ -130,11 +138,10 @@ jobs:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
         run: |
-          cd scripts
           if [ -n "${{ github.event.inputs.year }}" ] && [ -n "${{ github.event.inputs.month }}" ]; then
-            python generate_report.py --mode monthly --year "${{ github.event.inputs.year }}" --month "${{ github.event.inputs.month }}"
+            python scripts/generate_report.py --mode monthly --year "${{ github.event.inputs.year }}" --month "${{ github.event.inputs.month }}"
           else
-            python generate_report.py --mode monthly
+            python scripts/generate_report.py --mode monthly
           fi
       
       - name: Commit and Push
@@ -143,7 +150,12 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           git add reports/
-          git diff --staged --quiet || git commit -m "📊 Monthly report $(date +%Y-%m)"
-          git push
+          if git diff --staged --quiet; then
+            echo "没有变化，跳过提交"
+          else
+            git commit -m "📊 Monthly report $(date +%Y-%m)"
+            git push
+            echo "报告已提交并推送"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
