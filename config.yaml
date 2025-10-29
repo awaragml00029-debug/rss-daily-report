@@ -1,7 +1,7 @@
 # Google Sheets 配置
 google_sheets:
   spreadsheet_id: "your-spreadsheet-id-here"  # 替换为你的 Sheet ID
-  sheet_name: "Sheet1"  # 替换为你的工作表名称
+  sheet_name: "RSS处理数据"  # 替换为你的工作表名称
   
 # 列索引映射（从1开始，对应 A=1, B=2...）
 columns:
