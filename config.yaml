@@ -26,6 +26,9 @@ keywords:
   - "蛋白质组"
   - "转录组"
   - "表观遗传"
+  - "Cancer"
+  - "R "
+  - "gene"
 
 # 排除关键词（可选，在标题中出现这些词会被过滤）
 exclude_keywords:
