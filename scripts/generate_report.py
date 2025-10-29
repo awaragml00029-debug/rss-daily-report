@@ -20,7 +20,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 class RSSReportGenerator:
     """RSS 报告生成器"""
     
-    def __init__(self, config_path: str = "config.yaml"):
+    def __init__(self, config_path: str = "../config.yaml"):
         """初始化生成器"""
         self.config = self._load_config(config_path)
         self.client = self._authenticate_google_sheets()
