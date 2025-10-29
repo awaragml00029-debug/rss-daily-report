@@ -20,7 +20,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 class RSSReportGenerator:
     """RSS 报告生成器"""
     
-    def __init__(self, config_path: str = "../config.yaml"):
+    def __init__(self, config_path: str = "config.yaml"):
         """初始化生成器"""
         self.config = self._load_config(config_path)
         self.client = self._authenticate_google_sheets()
@@ -28,8 +28,22 @@ class RSSReportGenerator:
         
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """加载配置文件"""
-        with open(config_path, 'r', encoding='utf-8') as f:
-            return yaml.safe_load(f)
+        # 智能查找配置文件
+        possible_paths = [
+            config_path,                                    # 当前目录
+            os.path.join('..', config_path),               # 上级目录
+            os.path.join(os.path.dirname(__file__), '..', config_path),  # 脚本的上级目录
+        ]
+        
+        for path in possible_paths:
+            if os.path.exists(path):
+                with open(path, 'r', encoding='utf-8') as f:
+                    return yaml.safe_load(f)
+        
+        # 如果都找不到，抛出错误
+        raise FileNotFoundError(
+            f"找不到配置文件 '{config_path}'。尝试过的路径: {possible_paths}"
+        )
     
     def _authenticate_google_sheets(self) -> gspread.Client:
         """认证 Google Sheets"""
