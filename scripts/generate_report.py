@@ -103,15 +103,19 @@ class RSSReportGenerator:
             # 配置 Gemini
             genai.configure(api_key=api_key)
 
-            # 获取自定义 API URL（如果有）
-            api_url = gemini_config.get('api_url')
+            # 获取自定义 API URL（优先使用环境变量，避免暴露配置）
+            api_url = os.getenv('GEMINI_API_URL')  # 先检查环境变量
             if api_url:
-                # 注意：google-generativeai 库可能不直接支持自定义 URL
-                # 这里我们记录配置，实际调用时可能需要直接使用 requests
                 self.gemini_api_url = api_url
-                print(f"🔧 使用自定义 Gemini API URL: {api_url}")
+                print(f"🔧 使用环境变量中的自定义 Gemini API URL")
             else:
-                self.gemini_api_url = None
+                # 环境变量不存在时，从配置文件读取
+                api_url = gemini_config.get('api_url')
+                if api_url:
+                    self.gemini_api_url = api_url
+                    print(f"🔧 使用配置文件中的 Gemini API URL: {api_url}")
+                else:
+                    self.gemini_api_url = None
 
             # 创建模型实例
             model_name = gemini_config.get('model', 'gemini-2.5-flash-lite')
