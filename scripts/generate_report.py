@@ -245,7 +245,7 @@ class RSSReportGenerator:
         items: List[Dict[str, Any]], 
         date: datetime
     ) -> str:
-        """生成每日 Markdown 报告"""
+        """生成每日 Markdown 报告 - 优化版：来源分组 + 优先级标记"""
         
         # 统计信息
         total_count = len(items)
@@ -253,69 +253,158 @@ class RSSReportGenerator:
         for item in items:
             keyword_counter.update(item['matched_keywords'])
         
-        # 按抓取时间排序（最新在前）
-        items.sort(
-            key=lambda x: self.parse_datetime(x['crawl_time']) or datetime.min,
-            reverse=True
-        )
+        # 按关键词数量分类（优先级）
+        high_priority = []  # 3个及以上关键词
+        medium_priority = []  # 2个关键词
+        normal_priority = []  # 1个关键词
+        
+        for item in items:
+            kw_count = len(item['matched_keywords'])
+            item['priority_count'] = kw_count
+            if kw_count >= 3:
+                high_priority.append(item)
+            elif kw_count == 2:
+                medium_priority.append(item)
+            else:
+                normal_priority.append(item)
+        
+        # 按来源分组
+        items_by_source = {}
+        for item in items:
+            source = item['source_name'] or item['category'] or '其他'
+            if source not in items_by_source:
+                items_by_source[source] = []
+            items_by_source[source].append(item)
+        
+        # 按来源的条目数排序
+        sorted_sources = sorted(items_by_source.items(), key=lambda x: len(x[1]), reverse=True)
         
         # 生成 Markdown
         md_lines = []
         md_lines.append(f"# 📅 Daily Report - {date.strftime('%Y-%m-%d')}")
         md_lines.append("")
-        md_lines.append("> 生物信息学 RSS 订阅日报")
-        md_lines.append(f"> 筛选关键词：{', '.join(self.config['keywords'])}")
+        md_lines.append("> 🧬 生物信息学 RSS 订阅日报")
         md_lines.append("")
         md_lines.append("---")
         md_lines.append("")
         
-        # 统计信息
+        # ===== 今日概览 =====
         md_lines.append("## 📊 今日概览")
         md_lines.append("")
-        md_lines.append(f"- ✅ 命中条目：{total_count}")
-        md_lines.append(f"- 📌 关键词命中：{sum(keyword_counter.values())} 次")
+        md_lines.append("| 统计项 | 数量 |")
+        md_lines.append("|--------|------|")
+        md_lines.append(f"| 📰 总条目 | {total_count} |")
+        md_lines.append(f"| 📚 来源数 | {len(items_by_source)} |")
+        md_lines.append(f"| ⭐ 高优先级（3+关键词） | {len(high_priority)} |")
+        md_lines.append(f"| 🔶 中优先级（2关键词） | {len(medium_priority)} |")
+        md_lines.append(f"| 📌 普通（1关键词） | {len(normal_priority)} |")
         md_lines.append("")
+        
+        # 热门关键词（前10个）
+        top_keywords = keyword_counter.most_common(10)
+        if top_keywords:
+            keywords_str = " ".join([f"{kw}({cnt})" for kw, cnt in top_keywords])
+            md_lines.append(f"**🔥 热门关键词**：{keywords_str}")
+            md_lines.append("")
+        
         md_lines.append("---")
         md_lines.append("")
         
-        # 内容列表
-        md_lines.append("## 📰 内容列表")
-        md_lines.append("")
-        
-        for idx, item in enumerate(items, 1):
-            keywords_str = "、".join(item['matched_keywords'])
-            md_lines.append(f"### {idx}. {item['title']}")
+        # ===== 重点关注（高优先级）=====
+        if high_priority:
+            md_lines.append("## ⭐ 重点关注")
             md_lines.append("")
-            md_lines.append(f"**匹配关键词**：{keywords_str}  ")
-            
-            if item['source_name']:
-                md_lines.append(f"**来源**：{item['source_name']}  ")
-            
-            if item['author']:
-                md_lines.append(f"**作者**：{item['author']}  ")
-            
-            if item['publish_time']:
-                md_lines.append(f"**发布时间**：{item['publish_time']}  ")
-            
-            if item['link']:
-                md_lines.append(f"**链接**：[阅读原文]({item['link']})")
-            
+            md_lines.append(f"*匹配 3 个及以上关键词的内容（共 {len(high_priority)} 条）*")
             md_lines.append("")
+            
+            # 按关键词数量排序
+            high_priority.sort(key=lambda x: len(x['matched_keywords']), reverse=True)
+            
+            for idx, item in enumerate(high_priority, 1):
+                keywords_str = "、".join(item['matched_keywords'])
+                source_str = item['source_name'] or item['category'] or '未知来源'
+                
+                md_lines.append(f"### {idx}. {item['title']}")
+                md_lines.append("")
+                md_lines.append(f"**来源**：{source_str} | **关键词**：{keywords_str}")
+                if item['author']:
+                    md_lines.append(f" | **作者**：{item['author']}")
+                if item['link']:
+                    md_lines.append(f"  ")
+                    md_lines.append(f"🔗 [查看详情]({item['link']})")
+                md_lines.append("")
+            
             md_lines.append("---")
             md_lines.append("")
         
-        # 关键词统计
-        if keyword_counter:
-            md_lines.append("## 🏷️ 关键词统计")
+        # ===== 按来源分组的内容 =====
+        md_lines.append("## 📚 分类浏览")
+        md_lines.append("")
+        
+        # 来源图标映射
+        source_icons = {
+            'GEO': '🧬',
+            '公众号': '📰',
+            'R-blogs': '📊',
+            'RNA-seq blog': '🔬',
+            'cnbeta': '💻',
+            'ImportHere': '📥',
+        }
+        
+        for source, source_items in sorted_sources:
+            icon = source_icons.get(source, '📁')
+            md_lines.append(f"### {icon} {source} ({len(source_items)}条)")
             md_lines.append("")
-            for keyword, count in keyword_counter.most_common():
-                md_lines.append(f"- {keyword}：{count} 次")
+            
+            # 按优先级和时间排序
+            source_items.sort(key=lambda x: (
+                -len(x['matched_keywords']),  # 关键词数多的在前
+                -(self.parse_datetime(x['crawl_time']) or datetime.min).timestamp()  # 时间新的在前
+            ))
+            
+            for idx, item in enumerate(source_items, 1):
+                keywords_str = "、".join(item['matched_keywords'])
+                
+                # 添加优先级标记
+                priority_mark = ""
+                if len(item['matched_keywords']) >= 3:
+                    priority_mark = "⭐ "
+                elif len(item['matched_keywords']) == 2:
+                    priority_mark = "🔶 "
+                
+                # 标题（带优先级标记和关键词）
+                md_lines.append(f"{idx}. {priority_mark}**{item['title']}**")
+                md_lines.append(f"   - 🏷️ {keywords_str}")
+                
+                if item['link']:
+                    md_lines.append(f"   - 🔗 [链接]({item['link']})")
+                
+                if item['author']:
+                    md_lines.append(f"   - ✍️ {item['author']}")
+                
+                md_lines.append("")
+            
             md_lines.append("")
+        
+        # ===== 关键词统计 =====
+        md_lines.append("---")
+        md_lines.append("")
+        md_lines.append("## 🏷️ 关键词统计")
+        md_lines.append("")
+        
+        # 生成表格
+        md_lines.append("| 关键词 | 出现次数 |")
+        md_lines.append("|--------|----------|")
+        for keyword, count in keyword_counter.most_common(20):
+            md_lines.append(f"| {keyword} | {count} |")
+        
+        md_lines.append("")
         
         # 页脚
         md_lines.append("---")
         md_lines.append("")
-        md_lines.append(f"*报告生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M')}*")
+        md_lines.append(f"*📅 报告生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M')}*  ")
+        md_lines.append(f"*🤖 由 GitHub Actions 自动生成*")
         
         return "\n".join(md_lines)
     
