@@ -770,15 +770,6 @@ draft: no
         """将markdown转换为HTML"""
         date_str = date.strftime('%Y-%m-%d')
 
-        # 清理 markdown 中的折叠标签（仅用于 HTML 生成）
-        # 这些标签在 Hugo 中需要，但在 HTML 转换时需要先移除，然后重新包装
-        import re
-        md_content = re.sub(r'<details>\s*', '', md_content)
-        md_content = re.sub(r'<summary[^>]*>(.*?)</summary>\s*', r'### \1\n', md_content)
-        md_content = re.sub(r'<div class="details-content"[^>]*>\s*', '', md_content)
-        md_content = re.sub(r'</div>\s*', '', md_content)
-        md_content = re.sub(r'</details>\s*', '', md_content)
-
         # 处理 AI 总结区域（需要特殊样式）
         ai_summary_html = ""
         remaining_content = md_content
@@ -837,9 +828,6 @@ draft: no
         # 修复链接（移除内部锚点的 target="_blank"）
         import re
         body_html = re.sub(r'<a href="#([^"]+)" target="_blank">', r'<a href="#\1">', body_html)
-
-        # 包装分类浏览区域的 h3 为 details/summary（实现折叠功能）
-        body_html = self._wrap_categories_with_details(body_html)
 
         # 为关键词统计表格添加特殊类名
         body_html = re.sub(
@@ -1370,48 +1358,6 @@ draft: no
 </html>"""
 
         return html
-
-    def _wrap_categories_with_details(self, html: str) -> str:
-        """包装分类浏览区域的 h3 为 details/summary 结构"""
-        import re
-
-        # 找到"📚 分类浏览"区域（从这个 h2 到下一个 h2）
-        browse_pattern = r'(<h2[^>]*>📚 分类浏览</h2>)(.*?)(?=<h2|$)'
-        browse_match = re.search(browse_pattern, html, re.DOTALL)
-
-        if not browse_match:
-            return html
-
-        browse_header = browse_match.group(1)
-        browse_content = browse_match.group(2)
-
-        # 在分类浏览区域内，找到所有 h3 及其后续内容
-        # 匹配 h3 标签，然后匹配到下一个 h3 或结束
-        h3_pattern = r'(<h3[^>]*>)(.*?)(</h3>)(.*?)(?=<h3|$)'
-
-        def replace_h3_with_details(match):
-            h3_open = match.group(1)
-            h3_content = match.group(2)
-            h3_close = match.group(3)
-            following_content = match.group(4)
-
-            # 构建 details/summary 结构
-            details_html = f'''<details>
-<summary>{h3_content}</summary>
-<div class="details-content">
-{following_content}
-</div>
-</details>
-'''
-            return details_html
-
-        # 替换所有 h3
-        new_browse_content = re.sub(h3_pattern, replace_h3_with_details, browse_content, flags=re.DOTALL)
-
-        # 替换原始内容
-        new_html = html[:browse_match.start()] + browse_header + new_browse_content + html[browse_match.end():]
-
-        return new_html
 
     def _simple_markdown_to_html(self, md_text: str) -> str:
         """简化的 markdown 转 HTML（当 markdown 库不可用时）"""
