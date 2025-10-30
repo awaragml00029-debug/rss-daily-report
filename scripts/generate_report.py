@@ -248,11 +248,75 @@ class RSSReportGenerator:
         """连接到指定的 Google Sheet"""
         spreadsheet_id = os.getenv('SHEET_ID') or self.config['google_sheets']['spreadsheet_id']
         sheet_name = self.config['google_sheets']['sheet_name']
-        
+
         spreadsheet = self.client.open_by_key(spreadsheet_id)
         self.sheet = spreadsheet.worksheet(sheet_name)
+
+        # 连接后自动清理旧数据
+        self.cleanup_old_data(days=15)
+
         return self.sheet
-    
+
+    def cleanup_old_data(self, days: int = 15):
+        """清理 Google Sheet 中超过指定天数的旧数据"""
+        try:
+            if not self.sheet:
+                return
+
+            print(f"🧹 开始清理 {days} 天前的旧数据...")
+
+            all_data = self.sheet.get_all_values()
+            if len(all_data) <= 1:  # 只有标题行或空表
+                print("  ℹ️  没有数据需要清理")
+                return
+
+            header = all_data[0]
+            rows = all_data[1:]
+
+            # 查找 crawl_time 列的索引
+            try:
+                crawl_time_idx = header.index('crawl_time')
+            except ValueError:
+                print("  ⚠️  未找到 crawl_time 列，跳过清理")
+                return
+
+            # 计算截止日期
+            cutoff_date = datetime.now() - timedelta(days=days)
+
+            # 找出需要保留的行（日期在截止日期之后的）
+            rows_to_keep = []
+            rows_to_delete = []
+
+            for idx, row in enumerate(rows, start=2):  # start=2 因为第1行是标题
+                if crawl_time_idx < len(row):
+                    crawl_time_str = row[crawl_time_idx]
+                    crawl_time = self.parse_datetime(crawl_time_str)
+
+                    if crawl_time and crawl_time >= cutoff_date:
+                        rows_to_keep.append(row)
+                    else:
+                        rows_to_delete.append(idx)
+                else:
+                    # 没有 crawl_time 的行也保留
+                    rows_to_keep.append(row)
+
+            if not rows_to_delete:
+                print(f"  ✅ 所有数据都在 {days} 天内，无需清理")
+                return
+
+            print(f"  📊 找到 {len(rows_to_delete)} 行旧数据需要删除")
+
+            # 删除旧数据行（从后往前删除，避免索引变化）
+            for row_idx in reversed(rows_to_delete):
+                self.sheet.delete_rows(row_idx)
+
+            print(f"  ✅ 成功清理 {len(rows_to_delete)} 行旧数据")
+            print(f"  📈 保留 {len(rows_to_keep)} 行近期数据")
+
+        except Exception as e:
+            print(f"  ⚠️  清理数据时出错: {e}", file=sys.stderr)
+            # 不抛出异常，避免影响主流程
+
     def get_all_data(self) -> List[List[str]]:
         """获取所有数据"""
         if not self.sheet:
@@ -596,11 +660,15 @@ class RSSReportGenerator:
         if show_more and more_items_by_source:
             md_lines.append("## 📎 更多内容")
             md_lines.append("")
-            
+
             for (display_name, icon, anchor), remaining_items in more_items_by_source.items():
-                md_lines.append(f"### <a name=\"更多-{anchor}\"></a>{icon} {display_name} 其他内容 ({len(remaining_items)}条)")
+                # 使用 details 折叠，但标题居左（不加 style 属性）
+                md_lines.append(f"<details>")
+                md_lines.append(f"<summary><a name=\"更多-{anchor}\"></a>{icon} {display_name} 其他内容 ({len(remaining_items)}条)</summary>")
                 md_lines.append("")
-                
+                md_lines.append(f'<div class="details-content" markdown="1">')
+                md_lines.append("")
+
                 for item in remaining_items:
                     title = item['title']
                     link = item.get('link', '')
@@ -608,9 +676,13 @@ class RSSReportGenerator:
                         md_lines.append(f"- [{title}]({link})")
                     else:
                         md_lines.append(f"- {title}")
-                
+
                 md_lines.append("")
-            
+                md_lines.append("</div>")
+                md_lines.append("")
+                md_lines.append("</details>")
+                md_lines.append("")
+
             md_lines.append("---")
             md_lines.append("")
         
@@ -769,6 +841,9 @@ draft: no
     def _markdown_to_html(self, md_content: str, date: datetime) -> str:
         """将markdown转换为HTML"""
         date_str = date.strftime('%Y-%m-%d')
+
+        # 先处理所有的 details 标签（提取、转换、重新包装）
+        md_content = self._process_details_tags(md_content)
 
         # 处理 AI 总结区域（需要特殊样式）
         ai_summary_html = ""
@@ -1358,6 +1433,39 @@ draft: no
 </html>"""
 
         return html
+
+    def _process_details_tags(self, md_content: str) -> str:
+        """处理 details 标签：提取、转换内部 markdown、重新包装"""
+        import re
+
+        # 匹配 <details>...</details> 整个块
+        details_pattern = r'<details>\s*<summary([^>]*)>(.*?)</summary>\s*(?:<div[^>]*>)?\s*(.*?)\s*(?:</div>)?\s*</details>'
+
+        def replace_details(match):
+            summary_attrs = match.group(1)  # summary 的属性（如 style=""）
+            summary_content = match.group(2)  # summary 的内容
+            inner_markdown = match.group(3)  # details 内部的 markdown 内容
+
+            # 转换内部 markdown 为 HTML
+            if MARKDOWN_AVAILABLE:
+                inner_html = markdown.markdown(inner_markdown.strip(), extensions=['extra', 'nl2br', 'tables'])
+            else:
+                inner_html = self._simple_markdown_to_html(inner_markdown.strip())
+
+            # 重新组装成完整的 details HTML
+            details_html = f'''<details>
+<summary{summary_attrs}>{summary_content}</summary>
+<div class="details-content">
+{inner_html}
+</div>
+</details>'''
+
+            return details_html
+
+        # 替换所有 details 块
+        processed = re.sub(details_pattern, replace_details, md_content, flags=re.DOTALL)
+
+        return processed
 
     def _simple_markdown_to_html(self, md_text: str) -> str:
         """简化的 markdown 转 HTML（当 markdown 库不可用时）"""
