@@ -705,6 +705,277 @@ class RSSReportGenerator:
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
         print(f"✅ 报告已保存: {filepath}")
+
+    def generate_hugo_front_matter(self, date: datetime, total_count: int) -> str:
+        """生成Hugo Front Matter"""
+        hugo_config = self.config.get('hugo', {})
+        author = hugo_config.get('author', 'oknet')
+
+        date_str = date.strftime('%Y-%m-%d')
+
+        front_matter = f"""---
+title: "科研日报 {date_str}"
+author: {author}
+date: '{date_str}'
+slug: {date_str}
+categories:
+  - DailyReport
+tags:
+  - Research
+  - Daily
+draft: no
+---
+
+"""
+        return front_matter
+
+    def generate_hugo_report(self, items: List[Dict[str, Any]], date: datetime) -> str:
+        """生成带Hugo Front Matter的报告"""
+        # 生成普通报告内容
+        report_content = self.generate_daily_report(items, date)
+
+        # 添加Front Matter
+        hugo_content = self.generate_hugo_front_matter(date, len(items)) + report_content
+
+        return hugo_content
+
+    def generate_html_report(self, items: List[Dict[str, Any]], date: datetime) -> str:
+        """生成静态HTML页面"""
+        # 先生成markdown内容
+        md_content = self.generate_daily_report(items, date)
+
+        # 转换为HTML（简单处理markdown语法）
+        html_content = self._markdown_to_html(md_content, date)
+
+        return html_content
+
+    def _markdown_to_html(self, md_content: str, date: datetime) -> str:
+        """将markdown转换为HTML（简化版）"""
+        date_str = date.strftime('%Y-%m-%d')
+
+        # HTML模板
+        html_template = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科研日报 - {date_str}</title>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }}
+
+        .container {{
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }}
+
+        h1 {{
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }}
+
+        h2 {{
+            color: #34495e;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            padding-left: 10px;
+            border-left: 4px solid #3498db;
+        }}
+
+        h3 {{
+            color: #555;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }}
+
+        h4 {{
+            color: #666;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }}
+
+        blockquote {{
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }}
+
+        .ai-summary {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }}
+
+        .ai-summary h2 {{
+            color: white;
+            border-left-color: white;
+        }}
+
+        .ai-summary h3 {{
+            color: #f0f0f0;
+            margin-top: 15px;
+        }}
+
+        .ai-summary blockquote {{
+            background: rgba(255,255,255,0.1);
+            border-left-color: white;
+            color: white;
+        }}
+
+        ul {{
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }}
+
+        li {{
+            margin-bottom: 8px;
+        }}
+
+        a {{
+            color: #3498db;
+            text-decoration: none;
+        }}
+
+        a:hover {{
+            text-decoration: underline;
+        }}
+
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }}
+
+        th, td {{
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }}
+
+        th {{
+            background: #3498db;
+            color: white;
+        }}
+
+        hr {{
+            border: none;
+            border-top: 2px solid #eee;
+            margin: 30px 0;
+        }}
+
+        .footer {{
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #777;
+            font-size: 14px;
+            text-align: center;
+        }}
+
+        @media (max-width: 768px) {{
+            .container {{
+                padding: 20px;
+            }}
+
+            body {{
+                padding: 10px;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+"""
+
+        # 简单的markdown到HTML转换
+        html_body = md_content
+
+        # 处理标题
+        html_body = html_body.replace('# ', '<h1>').replace('\n', '</h1>\n', 1)
+
+        # 处理AI总结区域（特殊样式）
+        if '## 🤖 今日AI智能总结' in html_body:
+            parts = html_body.split('## 🤖 今日AI智能总结')
+            before_ai = parts[0]
+            after_ai = parts[1] if len(parts) > 1 else ''
+
+            if '---' in after_ai:
+                ai_section, rest = after_ai.split('---', 1)
+                html_body = before_ai + '<div class="ai-summary"><h2>🤖 今日AI智能总结</h2>' + ai_section + '</div><hr>' + rest
+            else:
+                html_body = before_ai + '<div class="ai-summary"><h2>🤖 今日AI智能总结</h2>' + after_ai + '</div>'
+
+        # 处理其他标题
+        html_body = html_body.replace('## ', '<h2>').replace('\n', '</h2>\n')
+        html_body = html_body.replace('### ', '<h3>').replace('\n', '</h3>\n')
+        html_body = html_body.replace('#### ', '<h4>').replace('\n', '</h4>\n')
+
+        # 处理引用
+        lines = html_body.split('\n')
+        processed_lines = []
+        in_blockquote = False
+
+        for line in lines:
+            if line.startswith('> '):
+                if not in_blockquote:
+                    processed_lines.append('<blockquote>')
+                    in_blockquote = True
+                processed_lines.append(line[2:])
+            else:
+                if in_blockquote:
+                    processed_lines.append('</blockquote>')
+                    in_blockquote = False
+                processed_lines.append(line)
+
+        if in_blockquote:
+            processed_lines.append('</blockquote>')
+
+        html_body = '\n'.join(processed_lines)
+
+        # 处理粗体和链接
+        import re
+        html_body = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_body)
+        html_body = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2" target="_blank">\1</a>', html_body)
+
+        # 处理列表
+        html_body = html_body.replace('\n- ', '\n<li>').replace('<li>', '<ul><li>', 1)
+        html_body = html_body.replace('\n\n', '</ul>\n\n')
+
+        # 处理分隔线
+        html_body = html_body.replace('---', '<hr>')
+
+        # 处理表格
+        html_body = html_body.replace('|', '</td><td>').replace('<td>', '<td>', 1)
+
+        html_template += html_body
+
+        html_template += """
+    </div>
+</body>
+</html>"""
+
+        return html_template
     
     def run_daily(self, target_date: Optional[datetime] = None):
         """运行每日报告生成"""
@@ -734,8 +1005,8 @@ class RSSReportGenerator:
         
         # 生成报告
         report_content = self.generate_daily_report(filtered_items, target_date)
-        
-        # 保存报告
+
+        # 1. 保存本地markdown报告
         output_config = self.config['output']
         filepath = os.path.join(
             output_config['daily_path'].format(
@@ -746,9 +1017,35 @@ class RSSReportGenerator:
                 date=target_date.strftime('%Y-%m-%d')
             )
         )
-        
         self.save_report(report_content, filepath)
-        print("✨ 每日报告生成完成！")
+
+        # 2. 生成并保存Hugo版本（带Front Matter）
+        hugo_content = self.generate_hugo_report(filtered_items, target_date)
+        hugo_filepath = os.path.join(
+            'temp_hugo',
+            f"daily-{target_date.strftime('%Y-%m-%d')}.md"
+        )
+        self.save_report(hugo_content, hugo_filepath)
+        print(f"📝 Hugo版本已生成: {hugo_filepath}")
+
+        # 3. 生成并保存HTML版本
+        html_content = self.generate_html_report(filtered_items, target_date)
+        html_filepath = os.path.join(
+            'temp_hugo',
+            'latest.html'
+        )
+        self.save_report(html_content, html_filepath)
+        print(f"🌐 HTML版本已生成: {html_filepath}")
+
+        print("✨ 所有报告生成完成！")
+
+        # 返回生成的文件路径，供后续推送使用
+        return {
+            'markdown': filepath,
+            'hugo': hugo_filepath,
+            'html': html_filepath,
+            'date': target_date
+        }
     
     def run_monthly(self, year: Optional[int] = None, month: Optional[int] = None):
         """运行月度报告生成"""

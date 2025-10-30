@@ -69,7 +69,7 @@ jobs:
             python scripts/generate_report.py --mode daily
           fi
       
-      - name: Commit and Push
+      - name: Commit and Push to Current Repo
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
@@ -83,6 +83,13 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push to Hugo and Backup Repos
+        env:
+          B_ACCOUNT_TOKEN: ${{ secrets.B_ACCOUNT_TOKEN }}
+        run: |
+          chmod +x scripts/push_to_repos.sh
+          bash scripts/push_to_repos.sh
   
   generate-monthly-report:
     runs-on: ubuntu-latest
