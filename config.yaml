@@ -212,3 +212,10 @@ backup:
   repo: "ixxmu/duty_bk"                       # 备份仓库
   branch: "main"                              # 目标分支（通常是main或master）
   path: "DailyReports/reports"                # 备份路径
+
+# 静态网站仓库配置
+static_site:
+  enabled: true                               # 是否启用静态网站推送
+  repo: "ixxmu/FigureYa_blog"                 # 静态网站仓库
+  branch: "main"                              # 目标分支
+  # HTML 文件将推送到根目录的 latest.html

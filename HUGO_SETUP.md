@@ -75,18 +75,24 @@
 
 ### 推送目标
 
-#### Hugo 仓库
+#### Hugo 仓库（源码）
 - **仓库**: `ixxmu/ixxmu.github.io.source`
 - **分支**: `FigureYY`
 - **路径**:
   - Markdown: `content/posts/DailyReports/daily-YYYY-MM-DD.md`
-  - HTML: `static/latest.html`
+  - ~~HTML: `static/latest.html`~~ (已改为推送到静态网站仓库)
 
 #### 备份仓库
 - **仓库**: `ixxmu/duty_bk`
 - **分支**: `main`
 - **路径**: `DailyReports/reports/YYYY/MM/daily-YYYY-MM-DD.md`
   - 按年月自动分类存储
+
+#### 静态网站仓库（新增！）
+- **仓库**: `ixxmu/FigureYa_blog`
+- **分支**: `main`
+- **路径**: `latest.html` (根目录)
+- **访问**: 通过你的博客域名直接访问 `https://yoursite.com/latest.html`
 
 ---
 

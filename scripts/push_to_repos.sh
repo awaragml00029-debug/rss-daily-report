@@ -21,6 +21,9 @@ BACKUP_REPO="${BACKUP_REPO:-ixxmu/duty_bk}"
 BACKUP_BRANCH="${BACKUP_BRANCH:-main}"
 BACKUP_PATH="${BACKUP_PATH:-DailyReports/reports}"
 
+STATIC_REPO="${STATIC_REPO:-ixxmu/FigureYa_blog}"
+STATIC_BRANCH="${STATIC_BRANCH:-main}"
+
 # 检查文件是否存在
 if [ ! -f "temp_hugo/daily-*.md" ] && [ ! -f temp_hugo/latest.html ]; then
     echo "⚠️  未找到要推送的文件"
@@ -118,6 +121,45 @@ else
 fi
 
 cd ..
+
+# ============================================
+# 推送 HTML 到静态网站仓库
+# ============================================
+echo ""
+echo "🌐 推送 HTML 到静态网站仓库..."
+
+if [ -f "temp_hugo/latest.html" ]; then
+    # 克隆静态网站仓库
+    STATIC_CLONE_DIR="temp_static_repo"
+    rm -rf "$STATIC_CLONE_DIR"
+
+    echo "克隆静态网站仓库: $STATIC_REPO (分支: $STATIC_BRANCH)"
+    git clone --depth=1 --branch="$STATIC_BRANCH" \
+        "https://${B_ACCOUNT_TOKEN}@github.com/${STATIC_REPO}.git" \
+        "$STATIC_CLONE_DIR"
+
+    # 复制 HTML 到根目录
+    cp temp_hugo/latest.html "$STATIC_CLONE_DIR/"
+    echo "✅ HTML 文件已复制到静态网站仓库根目录"
+
+    # 提交并推送
+    cd "$STATIC_CLONE_DIR"
+    git add latest.html
+
+    if git diff --staged --quiet; then
+        echo "ℹ️  静态网站仓库没有变化，跳过推送"
+    else
+        DATE=$(date +%Y-%m-%d)
+        git commit -m "🌐 Update latest daily report $DATE"
+        git push origin "$STATIC_BRANCH"
+        echo "✅ 已推送到静态网站仓库"
+    fi
+
+    cd ..
+    rm -rf "$STATIC_CLONE_DIR"
+else
+    echo "⚠️  未找到 latest.html 文件，跳过静态网站推送"
+fi
 
 # 清理临时目录
 echo ""

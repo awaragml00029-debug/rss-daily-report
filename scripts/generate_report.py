@@ -25,6 +25,14 @@ except ImportError:
     GEMINI_AVAILABLE = False
     print("警告: google-generativeai 未安装，AI总结功能将被禁用", file=sys.stderr)
 
+# Markdown 转换支持
+try:
+    import markdown
+    MARKDOWN_AVAILABLE = True
+except ImportError:
+    MARKDOWN_AVAILABLE = False
+    print("警告: markdown 未安装，HTML生成将使用简化版本", file=sys.stderr)
+
 
 class RSSReportGenerator:
     """RSS 报告生成器"""
@@ -750,15 +758,65 @@ draft: no
         return html_content
 
     def _markdown_to_html(self, md_content: str, date: datetime) -> str:
-        """将markdown转换为HTML（简化版）"""
+        """将markdown转换为HTML"""
         date_str = date.strftime('%Y-%m-%d')
 
-        # HTML模板
-        html_template = f"""<!DOCTYPE html>
+        # 处理 AI 总结区域（需要特殊样式）
+        ai_summary_html = ""
+        remaining_content = md_content
+
+        if '## 🤖 今日AI智能总结' in md_content:
+            parts = md_content.split('## 🤖 今日AI智能总结', 1)
+            before_ai = parts[0]
+            after_ai = parts[1] if len(parts) > 1 else ''
+
+            # 找到 AI 总结结束位置（下一个 ## 或 ---)
+            ai_end_markers = ['---', '\n## ']
+            ai_end_pos = len(after_ai)
+            for marker in ai_end_markers:
+                pos = after_ai.find(marker)
+                if pos != -1 and pos < ai_end_pos:
+                    ai_end_pos = pos
+
+            ai_content = after_ai[:ai_end_pos]
+            remaining = after_ai[ai_end_pos:]
+
+            # 转换 AI 总结部分
+            if MARKDOWN_AVAILABLE:
+                ai_html = markdown.markdown(ai_content, extensions=['extra', 'nl2br'])
+            else:
+                ai_html = self._simple_markdown_to_html(ai_content)
+
+            ai_summary_html = f'<div class="ai-summary"><h2>🤖 今日AI智能总结</h2>{ai_html}</div><hr>'
+            remaining_content = before_ai + remaining
+
+        # 转换其余内容
+        if MARKDOWN_AVAILABLE:
+            body_html = markdown.markdown(remaining_content, extensions=['extra', 'nl2br', 'tables'])
+        else:
+            body_html = self._simple_markdown_to_html(remaining_content)
+
+        # 插入 AI 总结到正确位置
+        if ai_summary_html:
+            # 在第一个 <h2> 或 <hr> 之前插入
+            insert_markers = ['<h2>', '<hr>']
+            insert_pos = len(body_html)
+            for marker in insert_markers:
+                pos = body_html.find(marker)
+                if pos != -1 and pos < insert_pos:
+                    insert_pos = pos
+            body_html = body_html[:insert_pos] + ai_summary_html + body_html[insert_pos:]
+
+        # 修复链接（移除内部锚点的 target="_blank"）
+        import re
+        body_html = re.sub(r'<a href="#([^"]+)" target="_blank">', r'<a href="#\1">', body_html)
+
+        # 完整的 HTML
+        html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>科研日报 - {date_str}</title>
     <style>
         * {{
@@ -768,214 +826,331 @@ draft: no
         }}
 
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: #f5f5f5;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.8;
+            color: #2c3e50;
+            background: #f5f7fa;
+            padding: 10px;
+            font-size: 16px;
         }}
 
         .container {{
-            max-width: 1000px;
+            max-width: 900px;
             margin: 0 auto;
             background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         }}
 
         h1 {{
-            color: #2c3e50;
+            color: #1a202c;
+            font-size: 1.8em;
             border-bottom: 3px solid #3498db;
-            padding-bottom: 10px;
+            padding-bottom: 12px;
             margin-bottom: 20px;
+            font-weight: 700;
         }}
 
         h2 {{
-            color: #34495e;
-            margin-top: 30px;
-            margin-bottom: 15px;
-            padding-left: 10px;
-            border-left: 4px solid #3498db;
+            color: #2d3748;
+            font-size: 1.5em;
+            margin-top: 35px;
+            margin-bottom: 18px;
+            padding-left: 12px;
+            border-left: 5px solid #3498db;
+            font-weight: 600;
         }}
 
         h3 {{
-            color: #555;
-            margin-top: 20px;
-            margin-bottom: 10px;
+            color: #4a5568;
+            font-size: 1.3em;
+            margin-top: 25px;
+            margin-bottom: 12px;
+            font-weight: 600;
         }}
 
         h4 {{
-            color: #666;
-            margin-top: 15px;
-            margin-bottom: 8px;
+            color: #718096;
+            font-size: 1.1em;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }}
+
+        p {{
+            margin-bottom: 16px;
+            line-height: 1.8;
         }}
 
         blockquote {{
             background: #f8f9fa;
             border-left: 4px solid #3498db;
-            padding: 15px 20px;
-            margin: 15px 0;
-            border-radius: 4px;
+            padding: 16px 20px;
+            margin: 20px 0;
+            border-radius: 6px;
+            color: #4a5568;
+            font-size: 0.95em;
+        }}
+
+        blockquote p {{
+            margin-bottom: 8px;
+        }}
+
+        blockquote p:last-child {{
+            margin-bottom: 0;
         }}
 
         .ai-summary {{
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
         }}
 
         .ai-summary h2 {{
             color: white;
-            border-left-color: white;
+            border-left-color: rgba(255,255,255,0.5);
+            margin-top: 0;
         }}
 
         .ai-summary h3 {{
             color: #f0f0f0;
-            margin-top: 15px;
+            margin-top: 18px;
         }}
 
         .ai-summary blockquote {{
-            background: rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.15);
             border-left-color: white;
             color: white;
         }}
 
-        ul {{
-            margin-left: 20px;
-            margin-bottom: 15px;
+        .ai-summary p {{
+            color: white;
+        }}
+
+        .ai-summary strong {{
+            color: #fff;
+        }}
+
+        ul, ol {{
+            margin-left: 25px;
+            margin-bottom: 18px;
         }}
 
         li {{
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            line-height: 1.8;
         }}
 
         a {{
             color: #3498db;
             text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s;
         }}
 
         a:hover {{
-            text-decoration: underline;
+            border-bottom-color: #3498db;
         }}
 
         table {{
             width: 100%;
             border-collapse: collapse;
-            margin: 15px 0;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            overflow: hidden;
         }}
 
         th, td {{
-            border: 1px solid #ddd;
-            padding: 12px;
+            border: 1px solid #e2e8f0;
+            padding: 14px 16px;
             text-align: left;
         }}
 
         th {{
             background: #3498db;
             color: white;
+            font-weight: 600;
+        }}
+
+        tr:nth-child(even) {{
+            background: #f8f9fa;
         }}
 
         hr {{
             border: none;
-            border-top: 2px solid #eee;
-            margin: 30px 0;
+            border-top: 2px solid #e2e8f0;
+            margin: 35px 0;
         }}
 
-        .footer {{
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            color: #777;
-            font-size: 14px;
-            text-align: center;
+        strong {{
+            color: #2d3748;
+            font-weight: 600;
         }}
 
+        code {{
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: "SF Mono", Monaco, Consolas, "Courier New", monospace;
+            font-size: 0.9em;
+            color: #e53e3e;
+        }}
+
+        /* 移动端优化 */
         @media (max-width: 768px) {{
-            .container {{
-                padding: 20px;
+            body {{
+                padding: 5px;
+                font-size: 15px;
             }}
 
+            .container {{
+                padding: 20px 15px;
+                border-radius: 8px;
+            }}
+
+            h1 {{
+                font-size: 1.5em;
+                padding-bottom: 10px;
+            }}
+
+            h2 {{
+                font-size: 1.3em;
+                margin-top: 25px;
+                padding-left: 10px;
+            }}
+
+            h3 {{
+                font-size: 1.15em;
+            }}
+
+            h4 {{
+                font-size: 1.05em;
+            }}
+
+            blockquote {{
+                padding: 12px 15px;
+                margin: 15px 0;
+            }}
+
+            .ai-summary {{
+                padding: 18px;
+                margin: 20px 0;
+            }}
+
+            table {{
+                font-size: 0.9em;
+            }}
+
+            th, td {{
+                padding: 10px 8px;
+            }}
+
+            ul, ol {{
+                margin-left: 20px;
+            }}
+        }}
+
+        /* 超小屏幕 */
+        @media (max-width: 480px) {{
             body {{
-                padding: 10px;
+                font-size: 14px;
+            }}
+
+            .container {{
+                padding: 15px 12px;
+            }}
+
+            h1 {{
+                font-size: 1.3em;
+            }}
+
+            h2 {{
+                font-size: 1.2em;
+            }}
+        }}
+
+        /* 平滑滚动 */
+        html {{
+            scroll-behavior: smooth;
+        }}
+
+        /* 提高可点击区域 */
+        @media (pointer: coarse) {{
+            a {{
+                padding: 4px 0;
+                display: inline-block;
             }}
         }}
     </style>
 </head>
 <body>
     <div class="container">
-"""
-
-        # 简单的markdown到HTML转换
-        html_body = md_content
-
-        # 处理标题
-        html_body = html_body.replace('# ', '<h1>').replace('\n', '</h1>\n', 1)
-
-        # 处理AI总结区域（特殊样式）
-        if '## 🤖 今日AI智能总结' in html_body:
-            parts = html_body.split('## 🤖 今日AI智能总结')
-            before_ai = parts[0]
-            after_ai = parts[1] if len(parts) > 1 else ''
-
-            if '---' in after_ai:
-                ai_section, rest = after_ai.split('---', 1)
-                html_body = before_ai + '<div class="ai-summary"><h2>🤖 今日AI智能总结</h2>' + ai_section + '</div><hr>' + rest
-            else:
-                html_body = before_ai + '<div class="ai-summary"><h2>🤖 今日AI智能总结</h2>' + after_ai + '</div>'
-
-        # 处理其他标题
-        html_body = html_body.replace('## ', '<h2>').replace('\n', '</h2>\n')
-        html_body = html_body.replace('### ', '<h3>').replace('\n', '</h3>\n')
-        html_body = html_body.replace('#### ', '<h4>').replace('\n', '</h4>\n')
-
-        # 处理引用
-        lines = html_body.split('\n')
-        processed_lines = []
-        in_blockquote = False
-
-        for line in lines:
-            if line.startswith('> '):
-                if not in_blockquote:
-                    processed_lines.append('<blockquote>')
-                    in_blockquote = True
-                processed_lines.append(line[2:])
-            else:
-                if in_blockquote:
-                    processed_lines.append('</blockquote>')
-                    in_blockquote = False
-                processed_lines.append(line)
-
-        if in_blockquote:
-            processed_lines.append('</blockquote>')
-
-        html_body = '\n'.join(processed_lines)
-
-        # 处理粗体和链接
-        import re
-        html_body = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_body)
-        html_body = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2" target="_blank">\1</a>', html_body)
-
-        # 处理列表
-        html_body = html_body.replace('\n- ', '\n<li>').replace('<li>', '<ul><li>', 1)
-        html_body = html_body.replace('\n\n', '</ul>\n\n')
-
-        # 处理分隔线
-        html_body = html_body.replace('---', '<hr>')
-
-        # 处理表格
-        html_body = html_body.replace('|', '</td><td>').replace('<td>', '<td>', 1)
-
-        html_template += html_body
-
-        html_template += """
+        {body_html}
     </div>
 </body>
 </html>"""
 
-        return html_template
+        return html
+
+    def _simple_markdown_to_html(self, md_text: str) -> str:
+        """简化的 markdown 转 HTML（当 markdown 库不可用时）"""
+        import re
+
+        html = md_text
+
+        # 标题
+        html = re.sub(r'^#### (.+)$', r'<h4>\1</h4>', html, flags=re.MULTILINE)
+        html = re.sub(r'^### (.+)$', r'<h3>\1</h3>', html, flags=re.MULTILINE)
+        html = re.sub(r'^## (.+)$', r'<h2>\1</h2>', html, flags=re.MULTILINE)
+        html = re.sub(r'^# (.+)$', r'<h1>\1</h1>', html, flags=re.MULTILINE)
+
+        # 粗体
+        html = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html)
+
+        # 链接（移除内部锚点的 target）
+        html = re.sub(r'\[(.+?)\]\((#.+?)\)', r'<a href="\2">\1</a>', html)
+        html = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2" target="_blank">\1</a>', html)
+
+        # 列表
+        html = re.sub(r'^\- (.+)$', r'<li>\1</li>', html, flags=re.MULTILINE)
+        html = re.sub(r'(<li>.*</li>\n)+', r'<ul>\g<0></ul>', html, flags=re.DOTALL)
+
+        # 引用
+        lines = html.split('\n')
+        in_quote = False
+        processed = []
+        quote_lines = []
+
+        for line in lines:
+            if line.startswith('> '):
+                if not in_quote:
+                    in_quote = True
+                quote_lines.append(line[2:])
+            else:
+                if in_quote:
+                    processed.append('<blockquote>' + '<br>'.join(quote_lines) + '</blockquote>')
+                    quote_lines = []
+                    in_quote = False
+                processed.append(line)
+
+        if in_quote:
+            processed.append('<blockquote>' + '<br>'.join(quote_lines) + '</blockquote>')
+
+        html = '\n'.join(processed)
+
+        # 段落
+        html = re.sub(r'\n\n+', '</p><p>', html)
+        html = '<p>' + html + '</p>'
+
+        # 分隔线
+        html = html.replace('---', '<hr>')
+
+        return html
     
     def run_daily(self, target_date: Optional[datetime] = None):
         """运行每日报告生成"""
