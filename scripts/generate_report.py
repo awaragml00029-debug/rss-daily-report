@@ -781,13 +781,25 @@ draft: no
             ai_content = after_ai[:ai_end_pos]
             remaining = after_ai[ai_end_pos:]
 
+            # 移除 remaining 开头的分隔线（避免双横线）
+            remaining = remaining.lstrip()
+            if remaining.startswith('---'):
+                remaining = remaining[3:].lstrip()
+
             # 转换 AI 总结部分
             if MARKDOWN_AVAILABLE:
                 ai_html = markdown.markdown(ai_content, extensions=['extra', 'nl2br'])
             else:
                 ai_html = self._simple_markdown_to_html(ai_content)
 
-            ai_summary_html = f'<div class="ai-summary"><h2>🤖 今日AI智能总结</h2>{ai_html}</div><hr>'
+            # 添加署名的 AI 总结区域
+            ai_summary_html = f'''<div class="ai-summary">
+                <div class="ai-summary-header">
+                    <h2>🤖 今日AI智能总结</h2>
+                    <span class="powered-by">Powered by 科研普拉斯 & Claude</span>
+                </div>
+                {ai_html}
+            </div>'''
             remaining_content = before_ai + remaining
 
         # 转换其余内容
@@ -811,6 +823,14 @@ draft: no
         import re
         body_html = re.sub(r'<a href="#([^"]+)" target="_blank">', r'<a href="#\1">', body_html)
 
+        # 为关键词统计表格添加特殊类名
+        body_html = re.sub(
+            r'(<h2>📊 关键词统计</h2>.*?<table)',
+            r'\1 class="keywords-table"',
+            body_html,
+            flags=re.DOTALL
+        )
+
         # 完整的 HTML
         html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -829,8 +849,8 @@ draft: no
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
             line-height: 1.8;
             color: #2c3e50;
-            background: #f5f7fa;
-            padding: 10px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 15px;
             font-size: 16px;
         }}
 
@@ -838,43 +858,48 @@ draft: no
             max-width: 900px;
             margin: 0 auto;
             background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         }}
 
+        /* 标题优化 */
         h1 {{
             color: #1a202c;
-            font-size: 1.8em;
-            border-bottom: 3px solid #3498db;
-            padding-bottom: 12px;
-            margin-bottom: 20px;
+            font-size: 2em;
+            border-bottom: 4px solid #667eea;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
             font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }}
 
         h2 {{
             color: #2d3748;
             font-size: 1.5em;
-            margin-top: 35px;
-            margin-bottom: 18px;
-            padding-left: 12px;
-            border-left: 5px solid #3498db;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-left: 15px;
+            border-left: 5px solid #667eea;
             font-weight: 600;
         }}
 
         h3 {{
             color: #4a5568;
-            font-size: 1.3em;
-            margin-top: 25px;
-            margin-bottom: 12px;
+            font-size: 1.25em;
+            margin-top: 28px;
+            margin-bottom: 14px;
             font-weight: 600;
         }}
 
         h4 {{
             color: #718096;
             font-size: 1.1em;
-            margin-top: 20px;
-            margin-bottom: 10px;
+            margin-top: 22px;
+            margin-bottom: 12px;
             font-weight: 600;
         }}
 
@@ -884,13 +909,14 @@ draft: no
         }}
 
         blockquote {{
-            background: #f8f9fa;
-            border-left: 4px solid #3498db;
-            padding: 16px 20px;
-            margin: 20px 0;
-            border-radius: 6px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 4px solid #667eea;
+            padding: 18px 22px;
+            margin: 22px 0;
+            border-radius: 8px;
             color: #4a5568;
             font-size: 0.95em;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }}
 
         blockquote p {{
@@ -901,30 +927,65 @@ draft: no
             margin-bottom: 0;
         }}
 
+        /* AI 总结区域优化 */
         .ai-summary {{
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 25px;
-            border-radius: 12px;
-            margin: 25px 0;
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            padding: 28px;
+            border-radius: 16px;
+            margin: 30px 0;
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.35);
+            position: relative;
+            overflow: hidden;
+        }}
+
+        .ai-summary::before {{
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }}
+
+        .ai-summary-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
         }}
 
         .ai-summary h2 {{
             color: white;
             border-left-color: rgba(255,255,255,0.5);
             margin-top: 0;
+            margin-bottom: 0;
+            flex: 1;
+        }}
+
+        .powered-by {{
+            font-size: 0.75em;
+            color: rgba(255,255,255,0.7);
+            font-weight: 400;
+            white-space: nowrap;
+            margin-left: 15px;
+            margin-top: 5px;
         }}
 
         .ai-summary h3 {{
             color: #f0f0f0;
             margin-top: 18px;
+            border-left: 3px solid rgba(255,255,255,0.5);
+            padding-left: 12px;
         }}
 
         .ai-summary blockquote {{
             background: rgba(255,255,255,0.15);
             border-left-color: white;
             color: white;
+            backdrop-filter: blur(10px);
         }}
 
         .ai-summary p {{
@@ -933,58 +994,84 @@ draft: no
 
         .ai-summary strong {{
             color: #fff;
+            font-weight: 600;
         }}
 
         ul, ol {{
-            margin-left: 25px;
+            margin-left: 28px;
             margin-bottom: 18px;
         }}
 
         li {{
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             line-height: 1.8;
         }}
 
+        /* 链接优化 */
         a {{
-            color: #3498db;
+            color: #667eea;
             text-decoration: none;
             border-bottom: 1px solid transparent;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            font-weight: 500;
         }}
 
         a:hover {{
-            border-bottom-color: #3498db;
+            border-bottom-color: #667eea;
+            color: #764ba2;
         }}
 
+        /* 表格优化 */
         table {{
             width: 100%;
             border-collapse: collapse;
             margin: 20px 0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border-radius: 10px;
             overflow: hidden;
         }}
 
         th, td {{
             border: 1px solid #e2e8f0;
-            padding: 14px 16px;
+            padding: 14px 18px;
             text-align: left;
         }}
 
         th {{
-            background: #3498db;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             font-weight: 600;
+            font-size: 0.95em;
         }}
 
         tr:nth-child(even) {{
             background: #f8f9fa;
         }}
 
+        tr:hover {{
+            background: #e9ecef;
+            transition: background 0.3s ease;
+        }}
+
+        /* 关键词统计表格特殊样式（更紧凑） */
+        .keywords-table {{
+            font-size: 0.9em;
+            max-width: 600px;
+        }}
+
+        .keywords-table th,
+        .keywords-table td {{
+            padding: 10px 14px;
+        }}
+
+        .keywords-table th {{
+            font-size: 0.9em;
+        }}
+
         hr {{
             border: none;
             border-top: 2px solid #e2e8f0;
-            margin: 35px 0;
+            margin: 40px 0;
         }}
 
         strong {{
@@ -994,34 +1081,55 @@ draft: no
 
         code {{
             background: #f1f5f9;
-            padding: 2px 6px;
-            border-radius: 4px;
+            padding: 3px 8px;
+            border-radius: 5px;
             font-family: "SF Mono", Monaco, Consolas, "Courier New", monospace;
             font-size: 0.9em;
             color: #e53e3e;
         }}
 
+        /* 美化滚动条 */
+        ::-webkit-scrollbar {{
+            width: 8px;
+            height: 8px;
+        }}
+
+        ::-webkit-scrollbar-track {{
+            background: #f1f1f1;
+            border-radius: 4px;
+        }}
+
+        ::-webkit-scrollbar-thumb {{
+            background: #667eea;
+            border-radius: 4px;
+        }}
+
+        ::-webkit-scrollbar-thumb:hover {{
+            background: #764ba2;
+        }}
+
         /* 移动端优化 */
         @media (max-width: 768px) {{
             body {{
-                padding: 5px;
+                padding: 8px;
                 font-size: 15px;
             }}
 
             .container {{
-                padding: 20px 15px;
-                border-radius: 8px;
+                padding: 22px 18px;
+                border-radius: 12px;
             }}
 
             h1 {{
-                font-size: 1.5em;
-                padding-bottom: 10px;
+                font-size: 1.6em;
+                padding-bottom: 12px;
+                margin-bottom: 20px;
             }}
 
             h2 {{
                 font-size: 1.3em;
-                margin-top: 25px;
-                padding-left: 10px;
+                margin-top: 30px;
+                padding-left: 12px;
             }}
 
             h3 {{
@@ -1033,25 +1141,44 @@ draft: no
             }}
 
             blockquote {{
-                padding: 12px 15px;
-                margin: 15px 0;
+                padding: 14px 16px;
+                margin: 18px 0;
             }}
 
             .ai-summary {{
-                padding: 18px;
-                margin: 20px 0;
+                padding: 20px;
+                margin: 22px 0;
+            }}
+
+            .ai-summary-header {{
+                flex-direction: column;
+                align-items: flex-start;
+            }}
+
+            .powered-by {{
+                margin-left: 0;
+                margin-top: 8px;
             }}
 
             table {{
-                font-size: 0.9em;
+                font-size: 0.85em;
             }}
 
             th, td {{
-                padding: 10px 8px;
+                padding: 10px 12px;
+            }}
+
+            .keywords-table {{
+                font-size: 0.8em;
+            }}
+
+            .keywords-table th,
+            .keywords-table td {{
+                padding: 8px 10px;
             }}
 
             ul, ol {{
-                margin-left: 20px;
+                margin-left: 22px;
             }}
         }}
 
@@ -1059,18 +1186,27 @@ draft: no
         @media (max-width: 480px) {{
             body {{
                 font-size: 14px;
+                padding: 5px;
             }}
 
             .container {{
-                padding: 15px 12px;
+                padding: 18px 14px;
             }}
 
             h1 {{
-                font-size: 1.3em;
+                font-size: 1.4em;
             }}
 
             h2 {{
                 font-size: 1.2em;
+            }}
+
+            .ai-summary {{
+                padding: 16px;
+            }}
+
+            .powered-by {{
+                font-size: 0.7em;
             }}
         }}
 
@@ -1084,6 +1220,32 @@ draft: no
             a {{
                 padding: 4px 0;
                 display: inline-block;
+            }}
+        }}
+
+        /* 打印优化 */
+        @media print {{
+            body {{
+                background: white;
+                padding: 0;
+            }}
+
+            .container {{
+                box-shadow: none;
+                max-width: 100%;
+            }}
+
+            .ai-summary {{
+                background: #f5f5f5;
+                color: black;
+                box-shadow: none;
+            }}
+
+            .ai-summary h2,
+            .ai-summary h3,
+            .ai-summary p,
+            .ai-summary strong {{
+                color: black;
             }}
         }}
     </style>
