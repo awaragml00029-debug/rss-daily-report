@@ -521,7 +521,8 @@ class RSSReportGenerator:
             # 使用 details/summary 实现折叠功能
             md_lines.append(f"<details>")
             md_lines.append(f"<summary>{icon} {display_name} ({source_count}条)</summary>")
-            md_lines.append(f'<div class="details-content">')
+            md_lines.append("")
+            md_lines.append(f'<div class="details-content" markdown="1">')
             md_lines.append("")
 
             # 详细展示的条目（前N条）
@@ -573,6 +574,7 @@ class RSSReportGenerator:
 
             md_lines.append("")
             md_lines.append("</div>")
+            md_lines.append("")
             md_lines.append("</details>")
             md_lines.append("")
         
