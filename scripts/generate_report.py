@@ -476,8 +476,8 @@ class RSSReportGenerator:
         md_lines.append(f"# 📅 Daily Report - {date.strftime('%Y-%m-%d')}")
         md_lines.append("")
         md_lines.append(f"> 今日筛选出 **{total_count}** 条内容，来自 **{len(items_by_source)}** 个来源")
-        md_lines.append(">")
-        md_lines.append("> *Powered by [科研普拉斯](https://kyplus.de) & [Claude](https://claude.ai)*")
+        md_lines.append("")
+        md_lines.append('<div class="powered-by-top">Powered by <a href="https://kyplus.de">科研普拉斯</a> & <a href="https://claude.ai">Claude</a></div>')
         md_lines.append("")
         md_lines.append("---")
         md_lines.append("")
@@ -881,9 +881,15 @@ draft: no
             font-size: 1.5em;
             margin-top: 40px;
             margin-bottom: 20px;
-            padding-left: 15px;
-            border-left: 5px solid #667eea;
+            padding-right: 15px;
+            border-right: 5px solid #667eea;
             font-weight: 600;
+            text-align: right;
+            direction: rtl;
+        }}
+
+        h2 * {{
+            direction: ltr;
         }}
 
         h3 {{
@@ -943,6 +949,27 @@ draft: no
             border-bottom-color: #764ba2;
         }}
 
+        /* 顶部署名（居右） */
+        .powered-by-top {{
+            text-align: right;
+            font-size: 0.85em;
+            color: #718096;
+            font-style: italic;
+            margin: 12px 0;
+            padding-right: 5px;
+        }}
+
+        .powered-by-top a {{
+            color: #667eea;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(102, 126, 234, 0.3);
+        }}
+
+        .powered-by-top a:hover {{
+            color: #764ba2;
+            border-bottom-color: #764ba2;
+        }}
+
         /* AI 总结区域优化 */
         .ai-summary {{
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -968,16 +995,28 @@ draft: no
 
         .ai-summary h2 {{
             color: white;
-            border-left-color: rgba(255,255,255,0.5);
+            border-left: none;
+            border-right: none;
             margin-top: 0;
             margin-bottom: 18px;
+            padding-left: 15px;
+            padding-right: 0;
+            text-align: left;
+            direction: ltr;
         }}
 
         .ai-summary h3 {{
             color: #f0f0f0;
             margin-top: 18px;
-            border-left: 3px solid rgba(255,255,255,0.5);
-            padding-left: 12px;
+            border-right: 3px solid rgba(255,255,255,0.5);
+            padding-right: 12px;
+            padding-left: 0;
+            text-align: right;
+            direction: rtl;
+        }}
+
+        .ai-summary h3 * {{
+            direction: ltr;
         }}
 
         .ai-summary blockquote {{
