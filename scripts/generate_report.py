@@ -476,6 +476,8 @@ class RSSReportGenerator:
         md_lines.append(f"# 📅 Daily Report - {date.strftime('%Y-%m-%d')}")
         md_lines.append("")
         md_lines.append(f"> 今日筛选出 **{total_count}** 条内容，来自 **{len(items_by_source)}** 个来源")
+        md_lines.append(">")
+        md_lines.append("> *Powered by [科研普拉斯](https://kyplus.de) & [Claude](https://claude.ai)*")
         md_lines.append("")
         md_lines.append("---")
         md_lines.append("")
@@ -792,12 +794,9 @@ draft: no
             else:
                 ai_html = self._simple_markdown_to_html(ai_content)
 
-            # 添加署名的 AI 总结区域
+            # AI 总结区域
             ai_summary_html = f'''<div class="ai-summary">
-                <div class="ai-summary-header">
-                    <h2>🤖 今日AI智能总结</h2>
-                    <span class="powered-by">Powered by 科研普拉斯 & Claude</span>
-                </div>
+                <h2>🤖 今日AI智能总结</h2>
                 {ai_html}
             </div>'''
             remaining_content = before_ai + remaining
@@ -927,6 +926,23 @@ draft: no
             margin-bottom: 0;
         }}
 
+        blockquote em {{
+            font-style: normal;
+            color: #718096;
+            font-size: 0.9em;
+        }}
+
+        blockquote a {{
+            color: #667eea;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(102, 126, 234, 0.3);
+        }}
+
+        blockquote a:hover {{
+            color: #764ba2;
+            border-bottom-color: #764ba2;
+        }}
+
         /* AI 总结区域优化 */
         .ai-summary {{
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -950,28 +966,11 @@ draft: no
             pointer-events: none;
         }}
 
-        .ai-summary-header {{
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 15px;
-        }}
-
         .ai-summary h2 {{
             color: white;
             border-left-color: rgba(255,255,255,0.5);
             margin-top: 0;
-            margin-bottom: 0;
-            flex: 1;
-        }}
-
-        .powered-by {{
-            font-size: 0.75em;
-            color: rgba(255,255,255,0.7);
-            font-weight: 400;
-            white-space: nowrap;
-            margin-left: 15px;
-            margin-top: 5px;
+            margin-bottom: 18px;
         }}
 
         .ai-summary h3 {{
