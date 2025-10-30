@@ -517,36 +517,40 @@ class RSSReportGenerator:
         
         for (display_name, sort_order, icon), source_items in sorted_sources:
             source_count = len(source_items)
-            md_lines.append(f"### {icon} {display_name} ({source_count}条)")
+
+            # 使用 details/summary 实现折叠功能
+            md_lines.append(f"<details>")
+            md_lines.append(f"<summary>{icon} {display_name} ({source_count}条)</summary>")
+            md_lines.append(f'<div class="details-content">')
             md_lines.append("")
-            
+
             # 详细展示的条目（前N条）
             detail_items = source_items[:detail_count]
             # 剩余条目
             remaining_items = source_items[detail_count:]
-            
+
             if detail_items:
                 md_lines.append("#### 详细内容" + (f"（前{len(detail_items)}条）" if remaining_items else f"（全部{len(detail_items)}条）"))
                 md_lines.append("")
-                
+
                 for idx, item in enumerate(detail_items, 1):
                     keywords_str = "、".join(item['matched_keywords'])
-                    
+
                     # 优先级标记
                     priority_mark = ""
                     if len(item['matched_keywords']) >= 3:
                         priority_mark = "⭐ "
-                    
+
                     # 标题
                     md_lines.append(f"**{idx}.** {priority_mark}**{item['title']}**")
-                    
+
                     # 作者（如果有）
                     if item.get('author'):
                         md_lines.append(f"- ✍️ **作者**：{item['author']}")
-                    
+
                     # 关键词
                     md_lines.append(f"- 🏷️ **关键词**：{keywords_str}")
-                    
+
                     # 描述
                     description = item.get('description', '').strip()
                     if description:
@@ -554,21 +558,22 @@ class RSSReportGenerator:
                         if desc_max_length > 0 and len(description) > desc_max_length:
                             description = description[:desc_max_length] + "..."
                         md_lines.append(f"- 📝 **描述**：{description}")
-                    
+
                     # 链接
                     if item.get('link'):
                         md_lines.append(f"- 🔗 [查看原文]({item['link']})")
-                    
+
                     md_lines.append("")
-            
+
             # 如果有剩余条目，添加提示
             if remaining_items:
                 anchor = display_name.replace(' ', '-').lower()
                 md_lines.append(f"> 💡 该来源还有 {len(remaining_items)} 条内容，详见 [文末](#更多-{anchor})")
                 more_items_by_source[(display_name, icon, anchor)] = remaining_items
-            
+
             md_lines.append("")
-            md_lines.append("---")
+            md_lines.append("</div>")
+            md_lines.append("</details>")
             md_lines.append("")
         
         # ===== 关键词统计 =====
@@ -881,15 +886,9 @@ draft: no
             font-size: 1.5em;
             margin-top: 40px;
             margin-bottom: 20px;
-            padding-right: 15px;
-            border-right: 5px solid #667eea;
+            padding-left: 15px;
+            border-left: 5px solid #667eea;
             font-weight: 600;
-            text-align: right;
-            direction: rtl;
-        }}
-
-        h2 * {{
-            direction: ltr;
         }}
 
         h3 {{
@@ -898,6 +897,67 @@ draft: no
             margin-top: 28px;
             margin-bottom: 14px;
             font-weight: 600;
+        }}
+
+        /* 分类浏览折叠功能 */
+        details {{
+            margin: 20px 0;
+            border-radius: 8px;
+            overflow: hidden;
+        }}
+
+        details summary {{
+            cursor: pointer;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #2d3748;
+            font-size: 1.25em;
+            font-weight: 600;
+            text-align: right;
+            direction: rtl;
+            border-right: 5px solid #667eea;
+            transition: all 0.3s ease;
+            list-style: none;
+            user-select: none;
+        }}
+
+        details summary * {{
+            direction: ltr;
+        }}
+
+        details summary::-webkit-details-marker {{
+            display: none;
+        }}
+
+        details summary::before {{
+            content: '▶';
+            display: inline-block;
+            margin-left: 10px;
+            transition: transform 0.3s ease;
+            font-size: 0.8em;
+        }}
+
+        details[open] summary::before {{
+            transform: rotate(90deg);
+        }}
+
+        details summary:hover {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }}
+
+        details[open] summary {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-right-color: white;
+        }}
+
+        details .details-content {{
+            padding: 20px;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-top: none;
         }}
 
         h4 {{
