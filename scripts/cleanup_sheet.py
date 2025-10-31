@@ -13,7 +13,7 @@ import os
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-from generate_report import BioinfoReportGenerator
+from generate_report import RSSReportGenerator
 import argparse
 
 
@@ -30,7 +30,7 @@ def main():
 
     try:
         # 创建报告生成器实例
-        generator = BioinfoReportGenerator()
+        generator = RSSReportGenerator()
 
         # 连接到 Google Sheet
         print("\n🔗 连接到 Google Sheet...")
