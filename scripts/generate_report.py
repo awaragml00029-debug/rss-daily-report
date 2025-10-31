@@ -252,9 +252,6 @@ class RSSReportGenerator:
         spreadsheet = self.client.open_by_key(spreadsheet_id)
         self.sheet = spreadsheet.worksheet(sheet_name)
 
-        # 连接后自动清理旧数据
-        self.cleanup_old_data(days=15)
-
         return self.sheet
 
     def cleanup_old_data(self, days: int = 15):
@@ -273,15 +270,13 @@ class RSSReportGenerator:
             header = all_data[0]
             rows = all_data[1:]
 
-            # 查找 crawl_time 列的索引
-            try:
-                crawl_time_idx = header.index('crawl_time')
-            except ValueError:
-                print("  ⚠️  未找到 crawl_time 列，跳过清理")
-                return
+            # 使用配置的列索引（从1开始，转换为从0开始的数组索引）
+            crawl_time_idx = self.config['columns']['crawl_time'] - 1  # A列 = 1，数组索引 = 0
+            print(f"  📍 使用第 {crawl_time_idx + 1} 列（{header[crawl_time_idx] if crawl_time_idx < len(header) else '未知'}）作为抓取时间")
 
             # 计算截止日期
             cutoff_date = datetime.now() - timedelta(days=days)
+            print(f"  📅 截止日期：{cutoff_date.strftime('%Y-%m-%d %H:%M:%S')}")
 
             # 找出需要保留的行（日期在截止日期之后的）
             rows_to_keep = []
@@ -305,16 +300,19 @@ class RSSReportGenerator:
                 return
 
             print(f"  📊 找到 {len(rows_to_delete)} 行旧数据需要删除")
+            print(f"  📈 保留 {len(rows_to_keep)} 行近期数据")
 
             # 删除旧数据行（从后往前删除，避免索引变化）
+            print(f"  🗑️  开始删除旧数据...")
             for row_idx in reversed(rows_to_delete):
                 self.sheet.delete_rows(row_idx)
 
             print(f"  ✅ 成功清理 {len(rows_to_delete)} 行旧数据")
-            print(f"  📈 保留 {len(rows_to_keep)} 行近期数据")
 
         except Exception as e:
             print(f"  ⚠️  清理数据时出错: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc()
             # 不抛出异常，避免影响主流程
 
     def get_all_data(self) -> List[List[str]]:
