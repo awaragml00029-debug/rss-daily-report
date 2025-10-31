@@ -302,10 +302,61 @@ class RSSReportGenerator:
             print(f"  📊 找到 {len(rows_to_delete)} 行旧数据需要删除")
             print(f"  📈 保留 {len(rows_to_keep)} 行近期数据")
 
-            # 删除旧数据行（从后往前删除，避免索引变化）
-            print(f"  🗑️  开始删除旧数据...")
-            for row_idx in reversed(rows_to_delete):
-                self.sheet.delete_rows(row_idx)
+            # 删除旧数据行（使用批量删除，避免 API 速率限制）
+            print(f"  🗑️  开始批量删除旧数据...")
+
+            # 将行索引转换为范围以减少 API 调用次数
+            # 例如: [2,3,4,7,8,9] -> [(2,5), (7,10)] (注意结束索引是 exclusive)
+            sorted_indices = sorted(rows_to_delete)
+            ranges_to_delete = []
+
+            if sorted_indices:
+                start = sorted_indices[0]
+                end = sorted_indices[0]
+
+                for idx in sorted_indices[1:]:
+                    if idx == end + 1:  # 连续的行
+                        end = idx
+                    else:  # 不连续，保存当前范围并开始新范围
+                        ranges_to_delete.append((start, end + 1))  # end+1 因为 API 使用 exclusive 结束索引
+                        start = idx
+                        end = idx
+
+                # 添加最后一个范围
+                ranges_to_delete.append((start, end + 1))
+
+            print(f"  📦 将 {len(rows_to_delete)} 行压缩为 {len(ranges_to_delete)} 个删除范围")
+
+            # 使用 batch_update 批量删除（从后往前，避免索引变化）
+            spreadsheet = self.client.open_by_key(os.getenv('SHEET_ID') or self.config['google_sheets']['spreadsheet_id'])
+
+            # 批量删除请求（每批最多 100 个操作以避免超出限制）
+            batch_size = 100
+            total_deleted = 0
+
+            for i in range(0, len(ranges_to_delete), batch_size):
+                batch_ranges = ranges_to_delete[i:i + batch_size]
+                requests = []
+
+                # 从后往前删除，避免索引变化影响
+                for start_idx, end_idx in reversed(batch_ranges):
+                    requests.append({
+                        'deleteDimension': {
+                            'range': {
+                                'sheetId': self.sheet.id,
+                                'dimension': 'ROWS',
+                                'startIndex': start_idx - 1,  # API 使用 0-based 索引
+                                'endIndex': end_idx - 1
+                            }
+                        }
+                    })
+
+                # 执行批量删除
+                if requests:
+                    spreadsheet.batch_update({'requests': requests})
+                    batch_deleted = sum(end - start for start, end in batch_ranges)
+                    total_deleted += batch_deleted
+                    print(f"  ✓ 已删除 {total_deleted}/{len(rows_to_delete)} 行 (批次 {i//batch_size + 1}/{(len(ranges_to_delete)-1)//batch_size + 1})")
 
             print(f"  ✅ 成功清理 {len(rows_to_delete)} 行旧数据")
 
