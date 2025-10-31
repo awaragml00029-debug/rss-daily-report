@@ -169,7 +169,7 @@ gemini:
   api_url: "https://generativelanguage.googleapis.com/v1beta/models"  # API基础URL（支持自定义，可通过环境变量 GEMINI_API_URL 覆盖以保护隐私）
   model: "gemini-2.5-flash-lite"             # 使用的模型
   temperature: 0.7                            # 生成温度（0-1，越高越有创意）
-  max_tokens: 1000                            # 每次总结的最大token数
+  max_tokens: 2000                            # 每次总结的最大token数
   language: "zh-CN"                           # 输出语言
   max_items_per_source: 20                    # 每个来源最多发送的条目数（控制成本）
 
