@@ -5,9 +5,9 @@ permissions:
   contents: write  # 允许推送代码
 
 on:
-  # 每天 23:00 (北京时间) = 15:00 UTC 运行
+  # 每天 05:30 (北京时间) = 21:30 UTC 运行
   schedule:
-    - cron: '0 15 * * *'
+    - cron: '30 21 * * *'
   
   # 每月最后一天额外运行月报（在 23:30 UTC = 07:30 北京时间第二天）
   # 注意：对于不同月份的最后一天，需要分别配置
@@ -60,6 +60,8 @@ jobs:
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}  # 👈 添加这行
+          GEMINI_API_URL: ${{ secrets.GEMINI_API_URL }}
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then
             python scripts/generate_report.py --mode daily --date "${{ github.event.inputs.date }}"
@@ -67,7 +69,7 @@ jobs:
             python scripts/generate_report.py --mode daily
           fi
       
-      - name: Commit and Push
+      - name: Commit and Push to Current Repo
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
@@ -81,6 +83,13 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push to Hugo and Backup Repos
+        env:
+          B_ACCOUNT_TOKEN: ${{ secrets.B_ACCOUNT_TOKEN }}
+        run: |
+          chmod +x scripts/push_to_repos.sh
+          bash scripts/push_to_repos.sh
   
   generate-monthly-report:
     runs-on: ubuntu-latest
@@ -137,6 +146,8 @@ jobs:
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}  # 👈 添加这行
+          GEMINI_API_URL: ${{ secrets.GEMINI_API_URL }}
         run: |
           if [ -n "${{ github.event.inputs.year }}" ] && [ -n "${{ github.event.inputs.month }}" ]; then
             python scripts/generate_report.py --mode monthly --year "${{ github.event.inputs.year }}" --month "${{ github.event.inputs.month }}"

@@ -162,3 +162,60 @@ monthly_report:
     "10": 31  # 10月
     "11": 30  # 11月
     "12": 31  # 12月
+
+# Gemini AI 配置（用于生成智能总结）
+gemini:
+  enabled: true                              # 是否启用AI总结功能
+  api_url: "https://generativelanguage.googleapis.com/v1beta/models"  # API基础URL（支持自定义，可通过环境变量 GEMINI_API_URL 覆盖以保护隐私）
+  model: "gemini-2.5-flash-lite"             # 使用的模型
+  temperature: 0.7                            # 生成温度（0-1，越高越有创意）
+  max_tokens: 1000                            # 每次总结的最大token数
+  language: "zh-CN"                           # 输出语言
+  max_items_per_source: 20                    # 每个来源最多发送的条目数（控制成本）
+
+  # AI 总结提示词模板
+  prompt_template: |
+    你是一位经验丰富的科研信息编辑，擅长信息收集、去重和内容校对。请用简练专业的语言总结以下来自"{source_name}"的文章。
+
+    文章列表：
+    {articles}
+
+    请生成精炼总结（最多250字）：
+
+    **今日焦点**：
+    一句话概括最值得关注的1-2个突破或创新
+
+    **主要方向**：
+    - [2-3个具体研究方向，直接说做什么]
+
+    **技术亮点**：
+    - [1-2个方法或技术的创新点]
+
+    要求：
+    1. 去除重复内容，仅保留最有价值的信息
+    2. 突出"首次"、"新型"、"突破"等关键进展
+    3. 用具体的研究对象和方法，避免泛泛而谈
+    4. 语言简洁直接，不要铺垫
+    5. 严格控制在250字以内
+
+# Hugo 博客集成配置
+hugo:
+  enabled: true                               # 是否启用Hugo推送
+  repo: "ixxmu/ixxmu.github.io.source"       # Hugo仓库
+  branch: "FigureYY"                          # 目标分支
+  path: "content/posts/DailyReports"          # 报告存放路径
+  author: "oknet"                             # Front Matter作者
+
+# 备份仓库配置
+backup:
+  enabled: true                               # 是否启用备份
+  repo: "ixxmu/duty_bk"                       # 备份仓库
+  branch: "main"                              # 目标分支（通常是main或master）
+  path: "DailyReports/reports"                # 备份路径
+
+# 静态网站仓库配置
+static_site:
+  enabled: true                               # 是否启用静态网站推送
+  repo: "ixxmu/FigureYa_blog"                 # 静态网站仓库
+  branch: "main"                              # 目标分支
+  # HTML 文件将推送到根目录的 latest.html

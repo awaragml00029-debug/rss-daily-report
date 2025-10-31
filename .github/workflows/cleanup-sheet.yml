@@ -1,0 +1,49 @@
+name: Cleanup Google Sheet
+
+# 手动触发 workflow
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: '保留多少天内的数据'
+        required: false
+        default: '15'
+        type: string
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Cleanup Google Sheet
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+        run: |
+          cd scripts
+          if [ -n "${{ github.event.inputs.days }}" ]; then
+            python cleanup_sheet.py --days "${{ github.event.inputs.days }}"
+          else
+            python cleanup_sheet.py --days 15
+          fi
+
+      - name: Summary
+        run: |
+          echo "🎉 Google Sheet 清理完成！"
+          echo "📊 保留了近 ${{ github.event.inputs.days || 15 }} 天的数据"

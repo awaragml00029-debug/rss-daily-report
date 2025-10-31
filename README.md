@@ -265,6 +265,271 @@ output:
 - 尝试使用更简单的关键词
 - 检查是否被排除关键词过滤
 
+## 🤖 AI 开发指南
+
+> 本章节为 AI 助手（如 Claude Code）提供项目架构和设计决策的快速参考，帮助快速理解代码库并高效添加新功能。
+
+### 📐 项目架构概览
+
+#### 核心文件职责
+
+```
+scripts/generate_report.py     # 主脚本（1500+ 行）
+├── BioinfoReportGenerator     # 核心类
+│   ├── connect_sheet()        # 连接 Google Sheets，自动清理15天前数据
+│   ├── generate_daily_report()        # 生成 Markdown 日报
+│   ├── generate_html_report()         # 生成 HTML 静态页
+│   ├── generate_hugo_report()         # 生成带 Hugo Front Matter 的报告
+│   ├── _markdown_to_html()            # Markdown → HTML 转换（关键！）
+│   ├── _process_details_tags()        # 处理折叠标签（修复格式问题）
+│   ├── generate_ai_summary_for_source() # 调用 Gemini API 生成 AI 总结
+│   └── cleanup_old_data()             # 清理 Google Sheet 旧数据
+
+config.yaml                    # 配置文件
+├── google_sheets              # Google Sheets 连接配置
+├── keywords / exclude_keywords # 关键词过滤
+├── gemini                     # AI 总结配置（model, prompt, API URL）
+├── hugo                       # Hugo 博客集成配置
+├── backup                     # 备份仓库配置
+└── static_site                # 静态网站配置
+
+scripts/push_to_repos.sh       # 多仓库推送脚本（Hugo源码、备份、静态站点）
+```
+
+#### 数据流向
+
+```
+Google Sheets (RSS数据)
+    ↓ (connect_sheet + cleanup_old_data)
+Python 处理 (关键词过滤、AI总结)
+    ↓ (generate_daily_report)
+Markdown 日报 (带折叠标签)
+    ├→ Hugo Front Matter → Hugo 源码仓库 (ixxmu/ixxmu.github.io.source)
+    ├→ 备份 → 备份仓库 (ixxmu/duty_bk)
+    └→ HTML 转换 (_process_details_tags) → 静态网站 (ixxmu/FigureYa_blog)
+```
+
+### 🎯 重要设计决策
+
+#### 1. Markdown vs HTML 分离处理
+
+**为什么**：
+- **Markdown 日报** 用于 Hugo 博客，Hugo 会自己渲染成 HTML
+- **HTML 静态页** 是独立的 `latest.html`，需要完整的 HTML 结构
+
+**实现**：
+- `generate_daily_report()` 生成纯 Markdown（带 HTML 折叠标签）
+- `generate_html_report()` 调用 `_markdown_to_html()` 转换为完整 HTML
+
+#### 2. 折叠功能的实现（重要！）
+
+**问题**：markdown 库的 `extra` 扩展无法正确处理 `<details>` 标签内的 markdown 内容。
+
+**错误方式**：
+```python
+# ❌ 直接转换，内部 markdown 不会被解析
+md_content = "<details><summary>标题</summary>\n**粗体**\n</details>"
+html = markdown.markdown(md_content, extensions=['extra'])
+# 结果：**粗体** 以纯文本显示
+```
+
+**正确方式**（当前实现）：
+```python
+# ✅ 提取 → 转换 → 重新包装
+def _process_details_tags(md_content):
+    # 1. 提取 <details> 块及内部 markdown
+    # 2. 单独转换内部 markdown 为 HTML
+    # 3. 重新包装成 <details><summary>...</summary><div>HTML</div></details>
+```
+
+**关键代码**：`generate_report.py:1365` 的 `_process_details_tags()` 方法
+
+#### 3. 多仓库推送策略
+
+**三个目标仓库**：
+1. **Hugo 源码** (`ixxmu/ixxmu.github.io.source`, 分支 `FigureYY`)
+   - 推送：Markdown 日报 + Hugo Front Matter
+   - 路径：`content/posts/DailyReports/`
+
+2. **备份仓库** (`ixxmu/duty_bk`, 分支 `main`)
+   - 推送：纯 Markdown 日报
+   - 路径：`DailyReports/reports/{year}/{month}/`
+
+3. **静态网站** (`ixxmu/FigureYa_blog`, 分支 `main`)
+   - 推送：`latest.html` 静态页面
+   - 路径：根目录
+
+**认证**：使用 B 账号的 Personal Access Token (`B_ACCOUNT_TOKEN`)
+
+#### 4. AI 总结的位置和样式
+
+**位置**：在"分类浏览"之前，顶部统计信息之后
+
+**为什么**：用户最关心的是总结，应该放在前面
+
+**实现**：
+- Markdown：正常的 `## 🤖 今日AI智能总结` + 子标题（h3）居右
+- HTML：特殊的 `.ai-summary` div，紫色渐变背景
+
+#### 5. 数据清理策略
+
+**自动清理**：连接 Google Sheet 后自动删除 15 天前的数据
+
+**为什么**：
+- 防止 Sheet 堆积几千条数据
+- 提高读取速度
+- 保持数据清洁
+
+**实现**：`cleanup_old_data(days=15)` 在 `connect_sheet()` 中自动调用
+
+### 🛠️ 常见开发场景
+
+#### 场景1：修改 AI 总结的 prompt
+
+**位置**：`config.yaml` 的 `gemini.prompt_template`
+
+**注意**：
+- 保持变量 `{source_name}` 不变
+- 字数限制在 `max_tokens` 中设置
+- 测试时可以降低 `max_items_per_source` 以节省成本
+
+#### 场景2：添加新的折叠区域
+
+**步骤**：
+1. **Markdown 生成**：添加 `<details><summary>标题</summary><div markdown="1">内容</div></details>`
+2. **HTML 转换**：自动被 `_process_details_tags()` 处理，无需额外代码
+
+**样式**：
+- **居右标题**：在 `<summary>` 添加 `style="text-align: right; direction: rtl; ..."`
+- **居左标题**：不添加 style 属性（如"更多内容"部分）
+
+#### 场景3：调整 HTML 样式
+
+**位置**：`generate_report.py:847` 的 `<style>` 标签内
+
+**关键 CSS 类**：
+- `.ai-summary` - AI 总结区域（紫色渐变）
+- `details summary` - 折叠标题样式
+- `.details-content` - 折叠内容容器
+- `.keywords-table` - 关键词统计表格
+- `.powered-by-top` - 顶部署名
+
+#### 场景4：修改运行时间
+
+**位置**：`.github/workflows/generate-report.yml:10`
+
+**计算方法**：
+- 北京时间（UTC+8）→ UTC 时间：减去 8 小时
+- 例如：北京时间 05:30 = UTC 21:30
+- cron 格式：`'30 21 * * *'`（分 时 日 月 周）
+
+### ⚠️ 常见陷阱
+
+#### 1. ❌ markdown 库无法处理 `<details>` 内的 markdown
+
+**问题**：
+```python
+# 这样不行！
+md = "<details><summary>标题</summary>\n**粗体**\n</details>"
+html = markdown.markdown(md, extensions=['extra'])
+# 结果：**粗体** 不会被转换
+```
+
+**解决**：使用 `_process_details_tags()` 方法先提取、转换、再包装
+
+#### 2. ❌ 内联样式 vs CSS 类的选择
+
+**Markdown 日报（Hugo）**：
+- ✅ 使用内联 `style=""` 属性（Hugo 会保留）
+- ❌ 不要依赖外部 CSS 类
+
+**HTML 静态页**：
+- ✅ 使用 CSS 类（`<style>` 标签内定义）
+- ✅ 可以使用内联样式覆盖
+
+#### 3. ❌ Git push 分支命名要求
+
+**要求**：分支必须以 `claude/` 开头，否则 push 会返回 403 错误
+
+**正确**：`claude/add-feature-xyz`
+**错误**：`feature/add-xyz`
+
+#### 4. ❌ 删除 Google Sheet 行的顺序
+
+**错误**：从前往后删除（索引会变化）
+```python
+for idx in rows_to_delete:  # [2, 5, 8]
+    sheet.delete_rows(idx)  # 删除第2行后，原来的第5行变成第4行！
+```
+
+**正确**：从后往前删除
+```python
+for idx in reversed(rows_to_delete):  # [8, 5, 2]
+    sheet.delete_rows(idx)  # 不会影响前面的索引
+```
+
+#### 5. ❌ 环境变量覆盖 config.yaml
+
+**优先级**：`环境变量 > config.yaml`
+
+**示例**：
+```python
+spreadsheet_id = os.getenv('SHEET_ID') or config['google_sheets']['spreadsheet_id']
+```
+
+**注意**：GitHub Secrets 会设置为环境变量，优先级更高
+
+### 📝 代码约定
+
+#### 命名规范
+
+- **方法名**：`snake_case`，私有方法以 `_` 开头
+- **CSS 类名**：`kebab-case`，如 `.ai-summary`
+- **配置键**：`snake_case`，如 `max_items_per_source`
+
+#### 折叠标签结构
+
+```html
+<!-- 标准结构 -->
+<details>
+<summary [style="..."]>标题内容</summary>
+<div class="details-content" markdown="1">
+
+markdown 内容
+
+</div>
+</details>
+```
+
+**注意**：
+- summary 后必须有空行
+- div 前后必须有空行
+- `markdown="1"` 属性在 Hugo 中有用，但 HTML 转换时会被移除
+
+#### 错误处理原则
+
+- **Google API 调用**：捕获异常，打印警告，不中断流程
+- **AI 总结失败**：跳过该来源，继续处理其他
+- **Sheet 清理失败**：打印警告，不影响报告生成
+
+### 🚀 快速上手检查清单
+
+开发新功能前，确认你理解了：
+- [ ] Markdown 和 HTML 是分开处理的
+- [ ] 折叠功能需要先提取、转换、再包装
+- [ ] 有三个推送目标（Hugo 源码、备份、静态站点）
+- [ ] 环境变量优先级高于 config.yaml
+- [ ] Google Sheet 会自动清理 15 天前的数据
+
+**需要帮助？**
+- 参考 `generate_report.py` 中的注释
+- 查看 `config.yaml` 的完整配置示例
+- 阅读 `HUGO_SETUP.md` 了解 Hugo 集成细节
+
+---
+
+**祝开发顺利！🎉**
+
 ## 📄 许可证
 
 MIT License
