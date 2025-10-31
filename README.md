@@ -530,6 +530,191 @@ markdown 内容
 
 **祝开发顺利！🎉**
 
+## 🔀 Git 工作流指南
+
+> 当使用 Claude Code 或其他 AI 助手开发功能时，如何正确合并分支到 main。
+
+### 问题背景
+
+Claude Code 环境和你的本地终端是**两个独立的 git 工作区**，这会导致合并流程出现混淆。
+
+### 核心要点
+
+#### 1. 权限限制
+- ✅ Claude Code 可以 push 到 `claude/` 开头的分支
+- ❌ Claude Code 无法直接 push 到 `main` 分支（会返回 403 错误）
+- 📌 **结论**：Claude 的修改会自动推送到 `claude/xxx` 分支，需要你手动合并到 main
+
+#### 2. 常见错误
+
+##### 错误 1：合并本地不存在的分支
+```bash
+# ❌ 错误：你本地没有 claude/xxx 分支
+git merge claude/add-ai-summary-feature-xxx
+# 结果：Already up to date
+
+# ✅ 正确：合并远程分支
+git fetch origin  # 先拉取远程分支
+git merge origin/claude/add-ai-summary-feature-xxx
+```
+
+##### 错误 2：分支分叉导致 push 被拒绝
+```bash
+# 现象
+! [rejected] main -> main (non-fast-forward)
+Your branch and 'origin/main' have diverged
+
+# 原因
+# - 远程 main 有新提交（如 GitHub Actions 自动生成的报告）
+# - 本地 main 也有新提交（你的合并）
+# - 两者分叉了
+
+# ✅ 解决方案
+git pull origin main --no-rebase  # 先拉取并合并远程改动
+git push origin main              # 再推送
+```
+
+##### 错误 3：忘记 fetch 远程分支
+```bash
+# ❌ 直接 merge 可能拿到旧版本
+git merge origin/claude/xxx
+
+# ✅ 先 fetch 确保最新
+git fetch origin
+git merge origin/claude/xxx
+```
+
+### 标准操作流程
+
+当 Claude Code 完成开发并推送到 `claude/xxx` 分支后，在**你的本地终端**执行：
+
+```bash
+# 1. 切换到 main 分支
+git checkout main
+
+# 2. 拉取所有远程更新（包括 claude 分支）
+git fetch origin
+
+# 3. 先同步远程 main 的最新改动（避免分叉）
+git pull origin main --no-rebase
+
+# 4. 合并 claude 分支
+git merge origin/claude/add-ai-summary-feature-xxx -m "Merge: [描述改动内容]"
+
+# 5. 推送到远程 main
+git push origin main
+```
+
+#### 一行命令版本
+
+```bash
+git checkout main && git fetch origin && git pull origin main --no-rebase && git merge origin/claude/[分支名] -m "Merge: [描述]" && git push origin main
+```
+
+### 故障排查
+
+#### 问题：`Already up to date` 但实际没合并
+
+**原因**：
+- 合并的是本地分支而不是远程分支
+- 或者忘记 `git fetch`
+
+**解决**：
+```bash
+git fetch origin  # 拉取最新的远程分支
+git log origin/claude/xxx --oneline -5  # 确认远程分支有新提交
+git merge origin/claude/xxx  # 合并远程分支
+```
+
+#### 问题：Push 被拒绝 (non-fast-forward)
+
+**原因**：远程 main 有新提交，本地 main 和远程 main 分叉了
+
+**解决**：
+```bash
+git pull origin main --no-rebase  # 合并远程改动
+git push origin main
+```
+
+#### 问题：合并后有冲突
+
+**解决**：
+```bash
+# 1. 查看冲突文件
+git status
+
+# 2. 手动编辑冲突文件，解决冲突标记
+# <<<<<<< HEAD
+# 你的改动
+# =======
+# 对方的改动
+# >>>>>>> origin/claude/xxx
+
+# 3. 标记冲突已解决
+git add [冲突文件]
+
+# 4. 完成合并
+git commit -m "Merge: resolve conflicts"
+
+# 5. 推送
+git push origin main
+```
+
+### 最佳实践
+
+1. **定期同步远程**
+   ```bash
+   git fetch origin  # 每次合并前执行
+   ```
+
+2. **检查状态**
+   ```bash
+   git status  # 确认当前分支和状态
+   git log origin/main..HEAD --oneline  # 查看未推送的提交
+   ```
+
+3. **使用 --no-rebase**
+   - `git pull --no-rebase` 保持提交历史清晰
+   - 避免 rebase 导致的历史重写问题
+
+4. **清晰的合并信息**
+   ```bash
+   # 好的合并信息
+   git merge origin/claude/xxx -m "Merge: 优化 Google Sheet 批量删除功能"
+
+   # 不好的合并信息
+   git merge origin/claude/xxx  # 使用默认信息
+   ```
+
+### 关键对照表
+
+| 问题 | 错误做法 | 正确做法 |
+|------|----------|----------|
+| 合并远程分支 | `git merge claude/xxx` | `git merge origin/claude/xxx` |
+| 分支分叉 | 直接 push | 先 `git pull --no-rebase` 再 push |
+| 确保最新 | 只 pull main | `git fetch origin` 拉取所有分支 |
+| Claude 推送限制 | 期望 Claude 推送到 main | Claude 只推送到 `claude/` 分支 |
+
+### 完整示例
+
+假设 Claude Code 修复了一个 bug 并推送到 `claude/fix-import-error-abc123`：
+
+```bash
+# 在你的终端执行
+cd ~/github/rss-daily-report
+
+# 标准流程
+git checkout main
+git fetch origin
+git pull origin main --no-rebase
+git merge origin/claude/fix-import-error-abc123 -m "Merge: 修复导入错误和 Python 版本警告"
+git push origin main
+
+# 完成！GitHub 上的 main 分支现在包含了所有修复
+```
+
+---
+
 ## 📄 许可证
 
 MIT License
