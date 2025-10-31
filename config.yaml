@@ -1,4 +1,4 @@
-# Google Sheets 配置
+ # Google Sheets 配置
 google_sheets:
   spreadsheet_id: "your-spreadsheet-id-here"  # 替换为你的 Sheet ID
   sheet_name: "RSS处理数据"  # 替换为你的工作表名称
@@ -118,7 +118,7 @@ exclude_keywords:
 # 格式：标识: [显示名称, 排序, 图标, 描述字段列索引（可选）]
 source_mapping:
   mpRss: ["公众号", 1, "📰"]
-  Database: ["数据前言", 2, "🧬"]
+  Database: ["数据前沿", 2, "🧬"]
   Journal: ["期刊文章", 3, "🔬"]
   Rcoding: ["学点生信", 4, "📊"]
   RnaSeq: ["博客更新", 5, "🧪"]
