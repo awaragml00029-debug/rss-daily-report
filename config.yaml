@@ -103,6 +103,11 @@ keywords:
   - "trajectory"
   - "轨迹"
 
+  # === 药理 ===
+  - "resistance"
+  - "耐药"
+  - "depmap"
+
 # 排除关键词（可选，在标题中出现这些词会被过滤）
 exclude_keywords:
   - "广告"
