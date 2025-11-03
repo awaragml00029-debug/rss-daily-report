@@ -121,6 +121,8 @@ exclude_keywords:
   - "更正"
   - "资金"
   - "培训"
+  - "金融"
+  - "financial"
     
 
 # 来源分类映射配置
