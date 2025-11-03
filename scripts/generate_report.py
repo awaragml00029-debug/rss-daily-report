@@ -15,7 +15,7 @@ from collections import Counter
 from typing import List, Dict, Any, Optional
 import yaml
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 
 # Gemini AI 支持
 try:
@@ -69,22 +69,25 @@ class RSSReportGenerator:
     
     def _authenticate_google_sheets(self) -> gspread.Client:
         """认证 Google Sheets"""
-        scope = [
-            'https://spreadsheets.google.com/feeds',
+        # 定义访问范围
+        scopes = [
+            'https://www.googleapis.com/auth/spreadsheets',
             'https://www.googleapis.com/auth/drive'
         ]
-        
+
         # 从环境变量读取凭证
         creds_json = os.getenv('GOOGLE_CREDENTIALS')
         if not creds_json:
             raise ValueError("未找到 GOOGLE_CREDENTIALS 环境变量")
-        
-        # 将 JSON 字符串写入临时文件
+
+        # 解析 JSON 凭证
         import json
         creds_dict = json.loads(creds_json)
-        
-        credentials = ServiceAccountCredentials.from_json_keyfile_dict(
-            creds_dict, scope
+
+        # 使用新的 google-auth 库创建凭证
+        credentials = Credentials.from_service_account_info(
+            creds_dict,
+            scopes=scopes
         )
         return gspread.authorize(credentials)
 
