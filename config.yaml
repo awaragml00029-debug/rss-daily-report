@@ -14,6 +14,7 @@ columns:
   description: 7     # G列 - 描述/摘要
   publish_time: 8    # H列 - 发布时间
   author: 9          # I列 - 作者
+  zhtitle: 10          # J列 - 中文标题
 
 # 筛选关键词（支持正则表达式，中英文都匹配）
 keywords:
