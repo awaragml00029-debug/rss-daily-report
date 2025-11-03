@@ -9,11 +9,12 @@ columns:
   attribute: 2       # B列 - 属性
   source_name: 3     # C列 - 适名称
   category: 4        # D列 - 适分类（用于分类识别）
-  title: 5           # E列 - 标题
+  title: 5           # E列 - 标题（原始标题，用于关键词筛选和AI总结）
   link: 6            # F列 - 链接
   description: 7     # G列 - 描述/摘要
   publish_time: 8    # H列 - 发布时间
   author: 9          # I列 - 作者
+  zhtitle: 10        # J列 - 中文标题（用于报告展示，如果为空则使用原始标题）
 
 # 筛选关键词（支持正则表达式，中英文都匹配）
 keywords:

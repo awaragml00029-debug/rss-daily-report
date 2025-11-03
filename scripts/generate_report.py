@@ -510,14 +510,24 @@ class RSSReportGenerator:
                 continue
             
             debug_counts['matched_keywords'] += 1
-            
+
+            # 获取中文标题（如果有）
+            zhtitle = ''
+            if 'zhtitle' in col_map and len(row) > col_map['zhtitle'] - 1:
+                zhtitle = row[col_map['zhtitle'] - 1].strip()
+
+            # 用于展示的标题：优先使用中文标题，否则使用原始标题
+            display_title = zhtitle if zhtitle else title
+
             # 构建数据项
             item = {
                 'crawl_time': crawl_time_str,
                 'attribute': row[col_map['attribute'] - 1] if len(row) > col_map['attribute'] - 1 else '',
                 'source_name': row[col_map['source_name'] - 1] if len(row) > col_map['source_name'] - 1 else '',
                 'category': row[col_map['category'] - 1] if len(row) > col_map['category'] - 1 else '',
-                'title': title,
+                'title': title,                    # 原始标题（用于关键词筛选、AI总结）
+                'zhtitle': zhtitle,    # 中文标题
+                'display_title': display_title,    # 展示标题（优先中文）
                 'link': row[col_map['link'] - 1] if len(row) > col_map['link'] - 1 else '',
                 'description': row[col_map['description'] - 1] if len(row) > col_map['description'] - 1 else '',
                 'publish_time': row[col_map['publish_time'] - 1] if len(row) > col_map['publish_time'] - 1 else '',
@@ -658,8 +668,8 @@ class RSSReportGenerator:
                     if len(item['matched_keywords']) >= 3:
                         priority_mark = "⭐ "
 
-                    # 标题
-                    md_lines.append(f"**{idx}.** {priority_mark}**{item['title']}**")
+                    # 标题（使用中文标题，如果有）
+                    md_lines.append(f"**{idx}.** {priority_mark}**{item['display_title']}**")
 
                     # 作者（如果有）
                     if item.get('author'):
@@ -722,7 +732,8 @@ class RSSReportGenerator:
                 md_lines.append("")
 
                 for item in remaining_items:
-                    title = item['title']
+                    # 使用中文标题（如果有）
+                    title = item['display_title']
                     link = item.get('link', '')
                     if link:
                         md_lines.append(f"- [{title}]({link})")
@@ -823,10 +834,10 @@ class RSSReportGenerator:
             md_lines.append(f"### {date_key} ({len(items)} 条)")
             md_lines.append("")
             
-            # 列出该日的文章标题
+            # 列出该日的文章标题（使用中文标题，如果有）
             for item in items[:10]:  # 每天最多显示10条
                 keywords_str = "、".join(item['matched_keywords'])
-                md_lines.append(f"- [{item['title']}]({item['link']}) *({keywords_str})*")
+                md_lines.append(f"- [{item['display_title']}]({item['link']}) *({keywords_str})*")
             
             if len(items) > 10:
                 md_lines.append(f"- *...还有 {len(items) - 10} 条*")
