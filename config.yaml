@@ -134,10 +134,10 @@ source_mapping:
 # 报告格式配置
 report_format:
   # 每个来源分类显示的详细条目数（前N条）
-  detail_items_per_source: 10
+  detail_items_per_source: 20
   
   # 描述字段最大长度（字符数，0表示不限制）
-  description_max_length: 500
+  description_max_length: 2500
   
   # 是否在"更多内容"区域显示未展开的条目
   show_more_section: true
