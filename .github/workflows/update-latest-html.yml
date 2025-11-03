@@ -1,0 +1,157 @@
+name: Update Latest HTML
+
+# 添加权限声明
+permissions:
+  contents: write  # 允许推送代码
+
+on:
+  # 每天 05:45 北京时间 = 21:45 UTC（比主 workflow 延迟 15 分钟）
+  # 如果你想改为 23:15 北京时间运行，请使用: '30 15 * * *'
+  schedule:
+    - cron: '45 21 * * *'
+
+  # 允许手动触发
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '指定日期 (YYYY-MM-DD)'
+        required: false
+
+jobs:
+  update-latest-html:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate Latest HTML
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_URL: ${{ secrets.GEMINI_API_URL }}
+        run: |
+          echo "🌐 生成 latest.html..."
+
+          # 创建临时目录
+          mkdir -p temp_latest_html
+
+          # 生成报告（只需要 HTML）
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python scripts/generate_report.py --mode daily --date "${{ github.event.inputs.date }}"
+          else
+            python scripts/generate_report.py --mode daily
+          fi
+
+          # 检查文件是否生成
+          if [ -f "temp_hugo/latest.html" ]; then
+            cp temp_hugo/latest.html temp_latest_html/
+            echo "✅ latest.html 已生成"
+          else
+            echo "❌ latest.html 生成失败"
+            exit 1
+          fi
+
+      - name: Push to Static Website Repository (Sparse Checkout)
+        env:
+          B_ACCOUNT_TOKEN: ${{ secrets.B_ACCOUNT_TOKEN }}
+        run: |
+          echo "🚀 推送 latest.html 到静态网站仓库..."
+
+          # 从 config.yaml 读取配置
+          STATIC_REPO="${STATIC_REPO:-ixxmu/FigureYa_blog}"
+          STATIC_BRANCH="${STATIC_BRANCH:-main}"
+
+          # 配置 Git
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+
+          # 创建临时目录
+          STATIC_CLONE_DIR="temp_static_repo"
+          rm -rf "$STATIC_CLONE_DIR"
+          mkdir -p "$STATIC_CLONE_DIR"
+          cd "$STATIC_CLONE_DIR"
+
+          echo "📦 使用稀疏检出克隆静态网站仓库（只下载 latest.html）..."
+
+          # 初始化 Git 仓库
+          git init
+          git remote add origin "https://${B_ACCOUNT_TOKEN}@github.com/${STATIC_REPO}.git"
+
+          # 启用稀疏检出
+          git config core.sparseCheckout true
+
+          # 指定只检出 latest.html
+          echo "latest.html" >> .git/info/sparse-checkout
+
+          # 拉取指定分支（浅克隆，只拉取最新提交）
+          git pull --depth=1 origin "$STATIC_BRANCH"
+
+          # 切换到正确的分支
+          git checkout "$STATIC_BRANCH" 2>/dev/null || git checkout -b "$STATIC_BRANCH"
+
+          echo "✅ 稀疏检出完成"
+
+          # 复制新的 latest.html
+          cp ../temp_latest_html/latest.html .
+          echo "✅ latest.html 已更新"
+
+          # 提交并推送
+          git add latest.html
+
+          if git diff --staged --quiet; then
+            echo "ℹ️  没有变化，跳过推送"
+          else
+            DATE=$(date +%Y-%m-%d)
+            git commit -m "🌐 Update latest daily report $DATE"
+
+            # 推送，带重试机制（最多 4 次，指数退避）
+            MAX_RETRIES=4
+            RETRY_COUNT=0
+            RETRY_DELAY=2
+
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              echo "尝试推送 (第 $((RETRY_COUNT + 1)) 次)..."
+
+              if git push -u origin "$STATIC_BRANCH"; then
+                echo "✅ 已推送到静态网站仓库"
+                break
+              else
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+
+                if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                  echo "⚠️  推送失败，等待 ${RETRY_DELAY}s 后重试..."
+                  sleep $RETRY_DELAY
+                  RETRY_DELAY=$((RETRY_DELAY * 2))  # 指数退避：2s, 4s, 8s, 16s
+                else
+                  echo "❌ 推送失败，已达最大重试次数"
+                  exit 1
+                fi
+              fi
+            done
+          fi
+
+          cd ..
+          rm -rf "$STATIC_CLONE_DIR"
+
+          echo "✨ latest.html 更新完成！"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "🧹 清理临时文件..."
+          rm -rf temp_hugo temp_latest_html
