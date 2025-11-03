@@ -952,9 +952,22 @@ draft: no
                     insert_pos = pos
             body_html = body_html[:insert_pos] + ai_summary_html + body_html[insert_pos:]
 
-        # 修复链接（移除内部锚点的 target="_blank"）
+        # 智能处理链接：外部链接在新窗口打开，内部锚点在本页跳转
         import re
-        body_html = re.sub(r'<a href="#([^"]+)" target="_blank">', r'<a href="#\1">', body_html)
+
+        # 第一步：移除所有链接的 target 属性（如果有）
+        body_html = re.sub(r'<a href="([^"]+)"[^>]*>', r'<a href="\1">', body_html)
+
+        # 第二步：为外部链接（http/https 开头）添加 target="_blank" 和 rel="noopener noreferrer"
+        # 匹配 <a href="http..."> 或 <a href="https...">
+        body_html = re.sub(
+            r'<a href="(https?://[^"]+)">',
+            r'<a href="\1" target="_blank" rel="noopener noreferrer">',
+            body_html
+        )
+
+        # 第三步：内部锚点链接（# 开头）保持原样，不添加 target
+        # 这些链接在第一步已经移除了 target，这里不需要额外处理
 
         # 为关键词统计表格添加特殊类名
         body_html = re.sub(
@@ -1534,9 +1547,11 @@ draft: no
         # 粗体
         html = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html)
 
-        # 链接（移除内部锚点的 target）
+        # 链接处理：
+        # 1. 内部锚点链接（# 开头）：不添加 target，在本页跳转
         html = re.sub(r'\[(.+?)\]\((#.+?)\)', r'<a href="\2">\1</a>', html)
-        html = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2" target="_blank">\1</a>', html)
+        # 2. 外部链接（非 # 开头）：添加 target="_blank" 和 rel="noopener noreferrer"，在新窗口打开
+        html = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2" target="_blank" rel="noopener noreferrer">\1</a>', html)
 
         # 列表
         html = re.sub(r'^\- (.+)$', r'<li>\1</li>', html, flags=re.MULTILINE)
