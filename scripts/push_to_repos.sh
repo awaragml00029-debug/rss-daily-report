@@ -58,12 +58,8 @@ if ls temp_hugo/daily-*.md 1> /dev/null 2>&1; then
     echo "✅ Markdown 文件已复制到 Hugo 仓库"
 fi
 
-# 复制 HTML 文件到 static 目录
-if [ -f "temp_hugo/latest.html" ]; then
-    mkdir -p "$HUGO_CLONE_DIR/static"
-    cp temp_hugo/latest.html "$HUGO_CLONE_DIR/static/"
-    echo "✅ HTML 文件已复制到 Hugo 仓库的 static 目录"
-fi
+# 注意：latest.html 不再推送到 Hugo 仓库
+# 它将由单独的 workflow (update-latest-html.yml) 直接推送到静态网站仓库
 
 # 提交并推送
 cd "$HUGO_CLONE_DIR"
@@ -123,47 +119,19 @@ fi
 cd ..
 
 # ============================================
-# 推送 HTML 到静态网站仓库
+# 注意：静态网站仓库的推送已移至独立 workflow
 # ============================================
+# latest.html 将由 update-latest-html.yml workflow 单独处理
+# 该 workflow 在本 workflow 完成 15 分钟后运行，确保 Hugo Actions 已完成构建
 echo ""
-echo "🌐 推送 HTML 到静态网站仓库..."
-
-if [ -f "temp_hugo/latest.html" ]; then
-    # 克隆静态网站仓库
-    STATIC_CLONE_DIR="temp_static_repo"
-    rm -rf "$STATIC_CLONE_DIR"
-
-    echo "克隆静态网站仓库: $STATIC_REPO (分支: $STATIC_BRANCH)"
-    git clone --depth=1 --branch="$STATIC_BRANCH" \
-        "https://${B_ACCOUNT_TOKEN}@github.com/${STATIC_REPO}.git" \
-        "$STATIC_CLONE_DIR"
-
-    # 复制 HTML 到根目录
-    cp temp_hugo/latest.html "$STATIC_CLONE_DIR/"
-    echo "✅ HTML 文件已复制到静态网站仓库根目录"
-
-    # 提交并推送
-    cd "$STATIC_CLONE_DIR"
-    git add latest.html
-
-    if git diff --staged --quiet; then
-        echo "ℹ️  静态网站仓库没有变化，跳过推送"
-    else
-        DATE=$(date +%Y-%m-%d)
-        git commit -m "🌐 Update latest daily report $DATE"
-        git push origin "$STATIC_BRANCH"
-        echo "✅ 已推送到静态网站仓库"
-    fi
-
-    cd ..
-    rm -rf "$STATIC_CLONE_DIR"
-else
-    echo "⚠️  未找到 latest.html 文件，跳过静态网站推送"
-fi
+echo "ℹ️  静态网站仓库 (latest.html) 将由独立 workflow 处理"
 
 # 清理临时目录
 echo ""
 echo "🧹 清理临时文件..."
-rm -rf "$HUGO_CLONE_DIR" "$BACKUP_CLONE_DIR" temp_hugo
+rm -rf "$HUGO_CLONE_DIR" "$BACKUP_CLONE_DIR"
+
+# 注意：temp_hugo 目录保留，供后续的 update-latest-html.yml workflow 使用
+echo "ℹ️  保留 temp_hugo 目录供后续 workflow 使用"
 
 echo "✨ 跨仓库推送完成！"
