@@ -1603,56 +1603,56 @@ draft: no
     def run_daily(self, target_date: Optional[datetime] = None):
         """运行每日报告生成"""
         print("🚀 开始生成每日报告...")
-        
+
         # 获取数据
         all_data = self.get_all_data()
         print(f"📊 共读取 {len(all_data) - 1} 行数据")
-        
-        # 确定目标日期
+
+        # 确定目标日期（使用 UTC 当前时间）
         if not target_date:
-            latest_date = self.get_latest_crawl_date(all_data)
-            if not latest_date:
-                print("❌ 未找到有效的抓取日期")
-                return
-            target_date = latest_date
-        
-        print(f"📅 目标日期: {target_date.strftime('%Y-%m-%d')}")
-        
-        # 筛选数据
+            target_date = datetime.utcnow()  # 使用 Actions 机器的 UTC 时间
+            print(f"📅 使用 UTC 当前时间: {target_date.strftime('%Y-%m-%d %H:%M:%S')}")
+
+        # 转换为北京时间用于显示
+        beijing_time = target_date + timedelta(hours=8)
+        print(f"📅 北京时间: {beijing_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"📅 筛选日期 (UTC): {target_date.strftime('%Y-%m-%d')}")
+
+        # 筛选数据（使用 UTC 日期）
         filtered_items = self.filter_data_by_date(all_data, target_date)
         print(f"✅ 筛选出 {len(filtered_items)} 条符合条件的数据")
-        
+
         if not filtered_items:
             print("⚠️  没有符合条件的数据，跳过报告生成")
             return
-        
-        # 生成报告
-        report_content = self.generate_daily_report(filtered_items, target_date)
 
-        # 1. 保存本地markdown报告
+        # 生成报告（使用北京时间显示）
+        report_content = self.generate_daily_report(filtered_items, beijing_time)
+
+        # 1. 保存本地markdown报告（使用北京时间日期）
         output_config = self.config['output']
         filepath = os.path.join(
             output_config['daily_path'].format(
-                year=target_date.year,
-                month=f"{target_date.month:02d}"
+                year=beijing_time.year,
+                month=f"{beijing_time.month:02d}"
             ),
             output_config['daily_filename'].format(
-                date=target_date.strftime('%Y-%m-%d')
+                date=beijing_time.strftime('%Y-%m-%d')
             )
         )
         self.save_report(report_content, filepath)
 
-        # 2. 生成并保存Hugo版本（带Front Matter）
-        hugo_content = self.generate_hugo_report(filtered_items, target_date)
+        # 2. 生成并保存Hugo版本（带Front Matter，使用北京时间）
+        hugo_content = self.generate_hugo_report(filtered_items, beijing_time)
         hugo_filepath = os.path.join(
             'temp_hugo',
-            f"daily-{target_date.strftime('%Y-%m-%d')}.md"
+            f"daily-{beijing_time.strftime('%Y-%m-%d')}.md"
         )
         self.save_report(hugo_content, hugo_filepath)
         print(f"📝 Hugo版本已生成: {hugo_filepath}")
 
-        # 3. 生成并保存HTML版本
-        html_content = self.generate_html_report(filtered_items, target_date)
+        # 3. 生成并保存HTML版本（使用北京时间）
+        html_content = self.generate_html_report(filtered_items, beijing_time)
         html_filepath = os.path.join(
             'temp_hugo',
             'latest.html'
