@@ -152,6 +152,7 @@ exclude_keywords:
   - "更正"
   - "资金"
   - "培训"
+  - "金融"
   - "advertisement"
   - "recruitment"
   - "hiring"
@@ -162,6 +163,7 @@ exclude_keywords:
   - "funding"
   - "workshop"
   - "training"
+  - "financial"
     
 
 # 来源分类映射配置
