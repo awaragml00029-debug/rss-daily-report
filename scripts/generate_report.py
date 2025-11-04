@@ -858,12 +858,20 @@ class RSSReportGenerator:
             f.write(content)
         print(f"✅ 报告已保存: {filepath}")
 
-    def generate_hugo_front_matter(self, date: datetime, total_count: int) -> str:
+    def generate_hugo_front_matter(self, date: datetime, total_count: int, week_number: str = '') -> str:
         """生成Hugo Front Matter"""
         hugo_config = self.config.get('hugo', {})
         author = hugo_config.get('author', 'oknet')
 
         date_str = date.strftime('%Y-%m-%d')
+
+        # 构建tags列表
+        tags = ['Research', 'Daily']
+        if week_number:
+            tags.append(week_number)
+
+        # 格式化tags为YAML列表
+        tags_yaml = '\n'.join([f'  - {tag}' for tag in tags])
 
         front_matter = f"""---
 title: "科研日报 {date_str}"
@@ -873,8 +881,7 @@ slug: {date_str}
 categories:
   - DailyReport
 tags:
-  - Research
-  - Daily
+{tags_yaml}
 draft: no
 ---
 
@@ -883,11 +890,16 @@ draft: no
 
     def generate_hugo_report(self, items: List[Dict[str, Any]], date: datetime) -> str:
         """生成带Hugo Front Matter的报告"""
+        # 从items中提取周数（取第一个item的attribute字段）
+        week_number = ''
+        if items and len(items) > 0:
+            week_number = items[0].get('attribute', '')
+
         # 生成普通报告内容
         report_content = self.generate_daily_report(items, date)
 
-        # 添加Front Matter
-        hugo_content = self.generate_hugo_front_matter(date, len(items)) + report_content
+        # 添加Front Matter（包含周数标签）
+        hugo_content = self.generate_hugo_front_matter(date, len(items), week_number) + report_content
 
         return hugo_content
 
@@ -1608,15 +1620,15 @@ draft: no
         all_data = self.get_all_data()
         print(f"📊 共读取 {len(all_data) - 1} 行数据")
 
-        # 确定目标日期（使用 UTC 当前时间）
+        # 确定目标日期（使用 UTC-5 时间）
         if not target_date:
-            target_date = datetime.utcnow()  # 使用 Actions 机器的 UTC 时间
-            print(f"📅 使用 UTC 当前时间: {target_date.strftime('%Y-%m-%d %H:%M:%S')}")
+            target_date = datetime.utcnow() - timedelta(hours=5)  # 使用 UTC-5 时间
+            print(f"📅 使用 UTC-5 当前时间: {target_date.strftime('%Y-%m-%d %H:%M:%S')}")
 
         # 转换为北京时间用于显示
         beijing_time = target_date + timedelta(hours=8)
         print(f"📅 北京时间: {beijing_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"📅 筛选日期 (UTC): {target_date.strftime('%Y-%m-%d')}")
+        print(f"📅 筛选日期 (UTC-5): {target_date.strftime('%Y-%m-%d')}")
 
         # 筛选数据（使用 UTC 日期）
         filtered_items = self.filter_data_by_date(all_data, target_date)
