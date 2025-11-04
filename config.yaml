@@ -28,6 +28,45 @@ keywords:
   - "leukemia"
   - "lymphoma"
 
+  # === 免疫相关 ===
+  - "免疫"
+  - "immune"
+  - "immunity"
+  - "immunology"
+  - "免疫微环境"
+  - "tumor microenvironment"
+  - "TME"
+
+  # === 代谢相关 ===
+  - "代谢"
+  - "metabolism"
+  - "metabolic"
+  - "代谢组"
+  - "metabolome"
+  - "metabolomics"
+
+  # === 心血管/神经系统 ===
+  - "心血管"
+  - "心脏"
+  - "cardiovascular"
+  - "cardiac"
+  - "脑瘤"
+  - "glioma"
+  - "阿尔兹海默"
+  - "老年痴呆"
+  - "Alzheimer"
+
+  # === 激酶/耐药 ===
+  - "激酶"
+  - "kinase"
+  - "耐药"
+  - "resistance"
+
+  # === 数据库/资源 ===
+  - "TCGA"
+  - "DepMap"
+  - "depmap"
+
   # === 测序技术 ===
   - "测序"
   - "sequencing"
@@ -59,15 +98,12 @@ keywords:
   - "基因组"
   - "转录组"
   - "蛋白质组"
-  - "代谢组"
   - "genome"
   - "genomics"
   - "transcriptome"
   - "transcriptomics"
   - "proteome"
   - "proteomics"
-  - "metabolome"
-  - "metabolomics"
 
   # === 生物信息 ===
   - "生物信息"
@@ -104,11 +140,6 @@ keywords:
   - "trajectory"
   - "轨迹"
 
-  # === 药理 ===
-  - "resistance"
-  - "耐药"
-  - "depmap"
-
 # 排除关键词（可选，在标题中出现这些词会被过滤）
 exclude_keywords:
   - "广告"
@@ -122,6 +153,17 @@ exclude_keywords:
   - "资金"
   - "培训"
   - "金融"
+  - "advertisement"
+  - "recruitment"
+  - "hiring"
+  - "job opening"
+  - "correction"
+  - "erratum"
+  - "retraction"
+  - "funding"
+  - "workshop"
+  - "training"
+  - "financial"
     
 
 # 来源分类映射配置
