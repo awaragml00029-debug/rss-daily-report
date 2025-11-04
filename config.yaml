@@ -153,6 +153,7 @@ exclude_keywords:
   - "资金"
   - "培训"
   - "金融"
+  - "大豆"
   - "advertisement"
   - "recruitment"
   - "hiring"
@@ -164,6 +165,7 @@ exclude_keywords:
   - "workshop"
   - "training"
   - "financial"
+  - "soybean "
     
 
 # 来源分类映射配置
