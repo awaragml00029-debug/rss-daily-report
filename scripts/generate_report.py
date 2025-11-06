@@ -44,6 +44,7 @@ class RSSReportGenerator:
         self.sheet = None
         self.gemini_enabled = False
         self.gemini_model = None
+        self.ai_summary_cache = {}  # 缓存AI总结结果，避免重复调用API
 
         # 初始化 Gemini AI
         self._init_gemini()
@@ -202,6 +203,11 @@ class RSSReportGenerator:
         if not self.gemini_enabled:
             return None
 
+        # 检查缓存，避免重复调用API
+        if source_name in self.ai_summary_cache:
+            print(f"🔄 使用缓存的 {source_name} AI 总结")
+            return self.ai_summary_cache[source_name]
+
         gemini_config = self.config.get('gemini', {})
         max_items = gemini_config.get('max_items_per_source', 20)
 
@@ -242,6 +248,8 @@ class RSSReportGenerator:
 
         if summary:
             print(f"✅ {source_name} AI 总结生成成功")
+            # 保存到缓存
+            self.ai_summary_cache[source_name] = summary
         else:
             print(f"⚠️  {source_name} AI 总结生成失败")
 
@@ -1615,6 +1623,10 @@ draft: no
     def run_daily(self, target_date: Optional[datetime] = None):
         """运行每日报告生成"""
         print("🚀 开始生成每日报告...")
+
+        # 清空 AI 总结缓存（避免使用旧数据）
+        self.ai_summary_cache.clear()
+        print("🔄 已清空 AI 总结缓存")
 
         # 获取数据
         all_data = self.get_all_data()
