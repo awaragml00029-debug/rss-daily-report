@@ -68,6 +68,13 @@ if [ -f "temp_hugo/latest.html" ]; then
     echo "   (Hugo 构建后会自动推送到静态网站仓库)"
 fi
 
+# 复制 Service Worker 文件（用于 Web Push 通知）
+if [ -f "static/sw.js" ]; then
+    mkdir -p "$HUGO_CLONE_DIR/static"
+    cp static/sw.js "$HUGO_CLONE_DIR/static/"
+    echo "✅ Service Worker 文件已复制到 Hugo 仓库的 static/ 目录"
+fi
+
 # 提交并推送
 cd "$HUGO_CLONE_DIR"
 git add .
@@ -136,6 +143,46 @@ cd ..
 # 因此 latest.html 会自动出现在静态网站仓库的根目录
 echo ""
 echo "ℹ️  latest.html 将由 Hugo Actions 自动推送到静态网站仓库"
+
+# ============================================
+# 触发 Web Push 通知（可选）
+# ============================================
+if [ -n "$ONESIGNAL_APP_ID" ] && [ -n "$ONESIGNAL_API_KEY" ]; then
+    echo ""
+    echo "📱 触发推送通知..."
+
+    DATE=$(date +%Y-%m-%d)
+    NOTIFICATION_PAYLOAD='{
+        "app_id": "'"$ONESIGNAL_APP_ID"'",
+        "included_segments": ["Subscribed Users"],
+        "headings": {"en": "科研日报更新", "zh": "科研日报更新"},
+        "contents": {"en": "'"$DATE"' 科研日报已生成，点击查看最新内容", "zh": "'"$DATE"' 科研日报已生成，点击查看最新内容"},
+        "url": "https://figureblog.top/latest.html",
+        "chrome_web_icon": "https://figureblog.top/favicon.ico",
+        "firefox_icon": "https://figureblog.top/favicon.ico"
+    }'
+
+    RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Basic $ONESIGNAL_API_KEY" \
+        -d "$NOTIFICATION_PAYLOAD" \
+        https://onesignal.com/api/v1/notifications)
+
+    HTTP_CODE=$(echo "$RESPONSE" | tail -n 1)
+    BODY=$(echo "$RESPONSE" | head -n -1)
+
+    if [ "$HTTP_CODE" -eq 200 ]; then
+        echo "✅ 推送通知已发送"
+        echo "   响应: $BODY"
+    else
+        echo "⚠️  推送通知发送失败 (HTTP $HTTP_CODE)"
+        echo "   响应: $BODY"
+    fi
+else
+    echo ""
+    echo "ℹ️  未配置 OneSignal，跳过推送通知"
+    echo "   如需启用推送通知，请设置 ONESIGNAL_APP_ID 和 ONESIGNAL_API_KEY 环境变量"
+fi
 
 # 清理临时目录
 echo ""

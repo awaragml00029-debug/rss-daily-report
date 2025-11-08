@@ -1015,6 +1015,15 @@ draft: no
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>科研日报 - {date_str}</title>
+
+    <!-- Web Push 推送通知配置 -->
+    <!-- 启用推送通知：将 push-enabled 设置为 true，并配置 OneSignal App ID -->
+    <meta name="push-enabled" content="false">
+    <meta name="onesignal-app-id" content="">
+
+    <!-- OneSignal SDK (仅在启用推送时加载) -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
     <style>
         * {{
             margin: 0;
@@ -1520,6 +1529,74 @@ draft: no
             }}
         }}
     </style>
+    <script>
+        // Web Push 通知初始化
+        // 配置：使用 OneSignal 作为推送服务提供商
+
+        // OneSignal 配置开关（从 meta 标签读取或默认关闭）
+        const PUSH_ENABLED = document.querySelector('meta[name="push-enabled"]')?.content === 'true';
+        const ONESIGNAL_APP_ID = document.querySelector('meta[name="onesignal-app-id"]')?.content || '';
+
+        // 如果启用了推送且配置了 OneSignal App ID
+        if (PUSH_ENABLED && ONESIGNAL_APP_ID) {{
+            // 加载 OneSignal SDK
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
+            OneSignalDeferred.push(function(OneSignal) {{
+                OneSignal.init({{
+                    appId: ONESIGNAL_APP_ID,
+                    notifyButton: {{
+                        enable: true,
+                        size: 'medium',
+                        position: 'bottom-right',
+                        offset: {{
+                            bottom: '20px',
+                            right: '20px'
+                        }},
+                        text: {{
+                            'tip.state.unsubscribed': '订阅科研日报更新通知',
+                            'tip.state.subscribed': '您已订阅更新通知',
+                            'tip.state.blocked': '您已屏蔽通知',
+                            'message.action.subscribed': '感谢订阅！',
+                            'message.action.resubscribed': '已重新订阅',
+                            'message.action.unsubscribed': '已取消订阅',
+                            'dialog.main.title': '管理通知订阅',
+                            'dialog.main.button.subscribe': '订阅',
+                            'dialog.main.button.unsubscribe': '取消订阅',
+                            'dialog.blocked.title': '解除通知屏蔽',
+                            'dialog.blocked.message': '请在浏览器设置中允许通知'
+                        }}
+                    }},
+                    welcomeNotification: {{
+                        title: '订阅成功！',
+                        message: '您将在每日新报告生成时收到推送通知'
+                    }}
+                }});
+
+                // 监听订阅状态变化
+                OneSignal.User.PushSubscription.addEventListener('change', function(event) {{
+                    console.log('订阅状态已变更:', event);
+                }});
+            }});
+        }} else if ('serviceWorker' in navigator && 'PushManager' in window) {{
+            // 如果没有配置 OneSignal，使用原生 Web Push（需要自建后端）
+            // 这里只注册 Service Worker，不实现推送功能
+            // 如需完整功能，请配置 OneSignal 或自建推送服务器
+
+            navigator.serviceWorker.register('/sw.js')
+                .then(function(registration) {{
+                    console.log('Service Worker 注册成功:', registration.scope);
+                }})
+                .catch(function(error) {{
+                    console.log('Service Worker 注册失败:', error);
+                }});
+        }}
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {{
+            // 可以在这里添加更多初始化逻辑
+            console.log('科研日报页面已加载');
+        }});
+    </script>
 </head>
 <body>
     <div class="container">
