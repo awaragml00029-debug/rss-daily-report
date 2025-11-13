@@ -62,7 +62,10 @@ keywords:
   - "神经"
   - "nervous"
   - "Neuronal"
-  
+
+    # 正则表达式关键词（匹配词根）
+  - "regex:onco(logy|logist|gene|genic)"
+  - "regex:immuno(logy|therapy|suppression)"
 
   # === 激酶/耐药 ===
   - "激酶"
