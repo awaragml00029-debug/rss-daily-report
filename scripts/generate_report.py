@@ -449,12 +449,29 @@ class RSSReportGenerator:
         智能关键词匹配
 
         匹配规则：
+        - regex:开头：使用自定义正则表达式（如"regex:onco(logy|logist|gene)"）
         - 中文关键词：支持字符间插入（如"单细胞"可匹配"单个细胞"）
         - 英文关键词：使用单词边界匹配（如"TME"只匹配完整单词）
         - 混合关键词：直接进行子串匹配（不区分大小写）
         """
         if not keyword or not text:
             return False
+
+        # 检查是否为自定义正则表达式
+        if keyword.startswith('regex:'):
+            # 提取正则表达式（去掉 "regex:" 前缀）
+            regex_pattern = keyword[6:].strip()
+            if not regex_pattern:
+                return False
+
+            try:
+                # 使用单词边界包围，确保完整匹配
+                pattern = r'\b(?:' + regex_pattern + r')\b'
+                return bool(re.search(pattern, text, re.IGNORECASE))
+            except re.error as e:
+                # 正则表达式错误，输出警告并跳过
+                print(f"警告: 正则表达式 '{regex_pattern}' 语法错误: {e}", file=sys.stderr)
+                return False
 
         # 检测关键词是否包含中文字符
         has_chinese = bool(re.search(r'[\u4e00-\u9fff]', keyword))

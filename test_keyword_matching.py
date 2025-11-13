@@ -39,6 +39,22 @@ class KeywordMatcher:
         if not keyword or not text:
             return False
 
+        # 检查是否为自定义正则表达式
+        if keyword.startswith('regex:'):
+            # 提取正则表达式（去掉 "regex:" 前缀）
+            regex_pattern = keyword[6:].strip()
+            if not regex_pattern:
+                return False
+
+            try:
+                # 使用单词边界包围，确保完整匹配
+                pattern = r'\b(?:' + regex_pattern + r')\b'
+                return bool(re.search(pattern, text, re.IGNORECASE))
+            except re.error as e:
+                # 正则表达式错误，输出警告并跳过
+                print(f"警告: 正则表达式 '{regex_pattern}' 语法错误: {e}", file=sys.stderr)
+                return False
+
         # 检测关键词是否包含中文字符
         has_chinese = bool(re.search(r'[\u4e00-\u9fff]', keyword))
 
@@ -70,7 +86,10 @@ def run_tests():
     keywords = [
         "TME", "tumor", "cancer", "scRNA", "scDNA", "scATAC",
         "Scanpy", "histone", "单细胞", "肿瘤", "RNA-seq",
-        "single-cell", "tumor microenvironment"
+        "single-cell", "tumor microenvironment",
+        # 正则表达式关键词（用于匹配词根）
+        "regex:onco(logy|logist|gene|genic)",
+        "regex:immuno(logy|therapy|suppression)"
     ]
 
     exclude_keywords = [
@@ -140,6 +159,55 @@ def run_tests():
             "expected_match": True,
             "should_match": ["cancer"],
             "description": "应该只匹配 cancer，不应该误匹配 TME（ultimate 中包含 t,m,e）"
+        },
+        # === 正则表达式关键词测试 ===
+        {
+            "title": "Advances in oncology research and treatment",
+            "expected_match": True,
+            "should_match": ["regex:onco(logy|logist|gene|genic)"],
+            "description": "正则表达式：应该匹配 oncology"
+        },
+        {
+            "title": "Interview with leading oncologist Dr. Smith",
+            "expected_match": True,
+            "should_match": ["regex:onco(logy|logist|gene|genic)"],
+            "description": "正则表达式：应该匹配 oncologist"
+        },
+        {
+            "title": "Role of oncogene in cancer development",
+            "expected_match": True,
+            "should_match": ["regex:onco(logy|logist|gene|genic)", "cancer"],
+            "description": "正则表达式：应该匹配 oncogene 和 cancer"
+        },
+        {
+            "title": "Oncogenic mutations drive tumor progression",
+            "expected_match": True,
+            "should_match": ["regex:onco(logy|logist|gene|genic)", "tumor"],
+            "description": "正则表达式：应该匹配 oncogenic 和 tumor"
+        },
+        {
+            "title": "Immunotherapy shows promise in clinical trials",
+            "expected_match": True,
+            "should_match": ["regex:immuno(logy|therapy|suppression)"],
+            "description": "正则表达式：应该匹配 immunotherapy"
+        },
+        {
+            "title": "Immunosuppression in transplant patients",
+            "expected_match": True,
+            "should_match": ["regex:immuno(logy|therapy|suppression)"],
+            "description": "正则表达式：应该匹配 immunosuppression"
+        },
+        {
+            "title": "Studying oncology textbooks for exam",
+            "expected_match": True,
+            "should_match": ["regex:onco(logy|logist|gene|genic)"],
+            "description": "正则表达式：不应该因为'onco'在'oncology'中间而误匹配（如'bronco'）"
+        },
+        {
+            "title": "The economic impact is significant",
+            "expected_match": False,
+            "should_match": [],
+            "description": "正则表达式：'economic'中虽然包含'onco'但不应匹配（需要单词边界）"
         }
     ]
 
