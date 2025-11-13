@@ -41,6 +41,10 @@ keywords:
   - "衰老"
   - "aging"
 
+  # 正则表达式关键词（匹配词根）
+  - "regex:onco(logy|logist|gene|genic)"
+  - "regex:immuno(logy|therapy|suppression)"
+
   # === 代谢相关 ===
   - "代谢"
   - "metabolism"
