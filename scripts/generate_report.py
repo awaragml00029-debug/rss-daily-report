@@ -418,28 +418,73 @@ class RSSReportGenerator:
         """
         根据关键词筛选，返回匹配的关键词列表
         支持正则表达式匹配
+
+        匹配策略：
+        1. 对于包含中文的关键词，使用宽松匹配（允许字符间插入）
+        2. 对于纯英文/数字关键词，使用单词边界或子串匹配（更严格）
+        3. 排除关键词同样使用严格匹配，避免误判
         """
         if not title:
             return []
-        
+
         keywords = self.config.get('keywords', [])
         exclude_keywords = self.config.get('exclude_keywords', [])
-        
-        # 检查排除关键词
+
+        # 检查排除关键词（优先级最高）
         for exclude_kw in exclude_keywords:
-            if re.search(exclude_kw, title, re.IGNORECASE):
-                return []
-        
+            # 对排除关键词使用更准确的匹配
+            if self._match_keyword(exclude_kw, title):
+                return []  # 如果匹配排除词，直接返回空列表
+
         # 检查匹配关键词
         matched = []
         for keyword in keywords:
-            # 将简单关键词转换为正则（支持中间插入字符）
+            if self._match_keyword(keyword, title):
+                matched.append(keyword)
+
+        return matched
+
+    def _match_keyword(self, keyword: str, text: str) -> bool:
+        """
+        智能关键词匹配
+
+        匹配规则：
+        - 中文关键词：支持字符间插入（如"单细胞"可匹配"单个细胞"）
+        - 英文关键词：使用单词边界匹配（如"TME"只匹配完整单词）
+        - 混合关键词：直接进行子串匹配（不区分大小写）
+        """
+        if not keyword or not text:
+            return False
+
+        # 检测关键词是否包含中文字符
+        has_chinese = bool(re.search(r'[\u4e00-\u9fff]', keyword))
+
+        # 检测关键词是否包含正则特殊字符（如 "RNA-seq" 中的 "-"）
+        has_special = bool(re.search(r'[.\-+*?^\[\](){}|\\]', keyword))
+
+        if has_chinese:
+            # 中文关键词：使用宽松匹配（允许字符间插入）
             # 例如: "单细胞" -> "单.*细.*胞"
             pattern = '.*'.join(list(keyword))
-            if re.search(pattern, title, re.IGNORECASE):
-                matched.append(keyword)
-        
-        return matched
+            return bool(re.search(pattern, text, re.IGNORECASE))
+        elif has_special or ' ' in keyword:
+            # 包含特殊字符或空格的关键词：直接作为正则使用
+            # 例如: "RNA-seq", "single cell", "tumor microenvironment"
+            try:
+                # 转义特殊字符，但保留 - 和空格
+                # 使用单词边界来确保完整匹配
+                escaped = re.escape(keyword).replace(r'\-', '-').replace(r'\ ', r'\s+')
+                pattern = r'\b' + escaped + r'\b'
+                return bool(re.search(pattern, text, re.IGNORECASE))
+            except re.error:
+                # 如果正则错误，回退到简单子串匹配
+                return keyword.lower() in text.lower()
+        else:
+            # 纯英文/数字关键词：使用单词边界匹配
+            # 例如: "TME", "cancer", "scRNA"
+            # 使用 \b 确保完整单词匹配，避免 "TME" 匹配到 "acetaminophen"
+            pattern = r'\b' + re.escape(keyword) + r'\b'
+            return bool(re.search(pattern, text, re.IGNORECASE))
     
     def get_latest_crawl_date(self, data: List[List[str]]) -> Optional[datetime]:
         """获取最新的抓取日期"""
