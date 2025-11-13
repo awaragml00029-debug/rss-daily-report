@@ -38,6 +38,8 @@ keywords:
   - "TME"
   - "疫苗"
   - "vaccine"
+  - "衰老"
+  - "aging"
 
   # === 代谢相关 ===
   - "代谢"
@@ -57,6 +59,10 @@ keywords:
   - "阿尔兹海默"
   - "老年痴呆"
   - "Alzheimer"
+  - "神经"
+  - "nervous"
+  - "Neuronal"
+  
 
   # === 激酶/耐药 ===
   - "激酶"
@@ -162,6 +168,7 @@ exclude_keywords:
   - "授课"
   - "大奖"
   - "大会"
+  - "研讨"
   - "advertisement"
   - "recruitment"
   - "hiring"
