@@ -40,6 +40,46 @@ keywords:
   - "vaccine"
   - "衰老"
   - "aging"
+  - "淋巴"
+  - "lymph"
+  - "微生物"
+  - "microorganism"
+  - "细菌"
+  - "bacteria"
+  - "T细胞"
+  - "T cell"
+  - "B细胞"
+  - "B cell"
+  - "巨噬细胞"
+  - "macrophage"
+  - "树突状细胞"
+  - "dendritic cell"
+  - "NK细胞"
+  - "NK cell"
+  - "单核细胞"
+  - "monocyte"
+
+  - "抗原"
+  - "antigen"
+  - "抗体"
+  - "antibody"
+  - "细胞因子"
+  - "cytokine"
+  - "趋化因子"
+  - "chemokine"
+  - "炎症"
+  - "inflammation"
+  - "TLR"
+  - "Toll-like receptor"
+  - "MHC"
+  - "HLA"
+
+  
+
+  # 正则表达式关键词（匹配词根）
+  - "regex:lymph(o|atic)?"
+  - "regex:micro(b|be|bial|organism)"
+  - "regex:bacter(ia|ial|ium)"
 
   # === 代谢相关 ===
   - "代谢"
@@ -151,6 +191,28 @@ keywords:
   - "trajectory"
   - "轨迹"
 
+
+# === 肿瘤与基因 ===
+  - "KRAS"
+
+
+# === 肠道与微生态 ===
+  - "肠道"
+  - "gut"
+
+# 正则表达式关键词（匹配词根）
+  - "regex:gut(-?microbiome)?"
+  - "regex:intestin(e|al)"
+
+
+# === 结构生物学 / 蛋白质预测 ===
+  - "openfold"
+  - "OpenFold"
+  - "蛋白预测"
+  - "protein prediction"
+
+
+
 # 排除关键词（可选，在标题中出现这些词会被过滤）
 exclude_keywords:
   - "广告"
@@ -172,6 +234,12 @@ exclude_keywords:
   - "大奖"
   - "大会"
   - "研讨"
+  - "服务器"
+  - "server"
+  - "指导"
+  - "guidance"
+  - "直播"
+  - "livestream"
   - "advertisement"
   - "recruitment"
   - "hiring"
