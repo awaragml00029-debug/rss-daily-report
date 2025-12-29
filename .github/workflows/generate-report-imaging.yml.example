@@ -1,18 +1,20 @@
-name: Generate Daily Report
+name: Generate Imaging Report (Example)
+
+# 这是医学影像报告的示例 workflow
+# 要启用此报告：
+# 1. 在 config.yaml 中将 report_configs.imaging.enabled 设置为 true
+# 2. 在 GitHub Secrets 中添加 SHEET_ID_2
+# 3. 将此文件重命名为 generate-report-imaging.yml
 
 # 添加权限声明
 permissions:
   contents: write  # 允许推送代码
 
 on:
-  # 每天 05:30 (北京时间) = 21:30 UTC 运行
+  # 每天 06:00 (北京时间) = 22:00 UTC 运行（与生物信息学报告错开）
   schedule:
-    - cron: '30 21 * * *'
-  
-  # 每月最后一天额外运行月报（在 23:30 UTC = 07:30 北京时间第二天）
-  # 注意：对于不同月份的最后一天，需要分别配置
-  # 这里简化处理，在每月28-31号都尝试生成月报
-  
+    - cron: '0 22 * * *'
+
   # 允许手动触发
   workflow_dispatch:
     inputs:
@@ -38,37 +40,37 @@ jobs:
   generate-daily-report:
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'daily')
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
           cache: 'pip'
-      
+
       - name: Install Dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-      
-      - name: Generate Daily Report
+
+      - name: Generate Daily Report (Imaging)
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-          SHEET_ID_1: ${{ secrets.SHEET_ID_1 }}  # 生物信息学报告的 Sheet ID
+          SHEET_ID_2: ${{ secrets.SHEET_ID_2 }}  # 医学影像报告的 Sheet ID
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_API_URL: ${{ secrets.GEMINI_API_URL }}
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then
-            python scripts/generate_report.py --config-name bioinfo --mode daily --date "${{ github.event.inputs.date }}"
+            python scripts/generate_report.py --config-name imaging --mode daily --date "${{ github.event.inputs.date }}"
           else
-            python scripts/generate_report.py --config-name bioinfo --mode daily
+            python scripts/generate_report.py --config-name imaging --mode daily
           fi
-      
+
       - name: Commit and Push to Current Repo
         run: |
           git config user.name "GitHub Actions Bot"
@@ -77,7 +79,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "没有变化，跳过提交"
           else
-            git commit -m "📝 Daily report $(date +%Y-%m-%d)"
+            git commit -m "📊 Imaging report $(date +%Y-%m-%d)"
             git push
             echo "报告已提交并推送"
           fi
@@ -90,35 +92,35 @@ jobs:
         run: |
           chmod +x scripts/push_to_repos.sh
           bash scripts/push_to_repos.sh
-  
+
   generate-monthly-report:
     runs-on: ubuntu-latest
     # 每月28-31号运行，或手动触发 monthly 模式
     if: |
-      (github.event_name == 'schedule' && 
-       (github.event.schedule == '0 15 28 * *' || 
-        github.event.schedule == '0 15 29 * *' || 
-        github.event.schedule == '0 15 30 * *' || 
+      (github.event_name == 'schedule' &&
+       (github.event.schedule == '0 15 28 * *' ||
+        github.event.schedule == '0 15 29 * *' ||
+        github.event.schedule == '0 15 30 * *' ||
         github.event.schedule == '0 15 31 * *')) ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'monthly')
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
           cache: 'pip'
-      
+
       - name: Install Dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-      
+
       - name: Check if Last Day of Month
         id: check_date
         run: |
@@ -126,35 +128,35 @@ jobs:
           current_day=$(date +%d)
           current_month=$(date +%m)
           current_year=$(date +%Y)
-          
+
           # 获取下个月的第一天，然后减一天，得到当月最后一天
           next_month=$(date -d "$(date +%Y-%m-01) +1 month" +%Y-%m-01)
           last_day=$(date -d "$next_month -1 day" +%d)
-          
+
           echo "current_day=$current_day"
           echo "last_day=$last_day"
-          
+
           # 判断是否是最后一天
           if [ "$current_day" == "$last_day" ]; then
             echo "is_last_day=true" >> $GITHUB_OUTPUT
           else
             echo "is_last_day=false" >> $GITHUB_OUTPUT
           fi
-      
-      - name: Generate Monthly Report
+
+      - name: Generate Monthly Report (Imaging)
         if: steps.check_date.outputs.is_last_day == 'true' || github.event_name == 'workflow_dispatch'
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-          SHEET_ID_1: ${{ secrets.SHEET_ID_1 }}  # 生物信息学报告的 Sheet ID
+          SHEET_ID_2: ${{ secrets.SHEET_ID_2 }}  # 医学影像报告的 Sheet ID
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_API_URL: ${{ secrets.GEMINI_API_URL }}
         run: |
           if [ -n "${{ github.event.inputs.year }}" ] && [ -n "${{ github.event.inputs.month }}" ]; then
-            python scripts/generate_report.py --config-name bioinfo --mode monthly --year "${{ github.event.inputs.year }}" --month "${{ github.event.inputs.month }}"
+            python scripts/generate_report.py --config-name imaging --mode monthly --year "${{ github.event.inputs.year }}" --month "${{ github.event.inputs.month }}"
           else
-            python scripts/generate_report.py --config-name bioinfo --mode monthly
+            python scripts/generate_report.py --config-name imaging --mode monthly
           fi
-      
+
       - name: Commit and Push
         if: steps.check_date.outputs.is_last_day == 'true' || github.event_name == 'workflow_dispatch'
         run: |
@@ -164,7 +166,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "没有变化，跳过提交"
           else
-            git commit -m "📊 Monthly report $(date +%Y-%m)"
+            git commit -m "📊 Imaging monthly report $(date +%Y-%m)"
             git push
             echo "报告已提交并推送"
           fi

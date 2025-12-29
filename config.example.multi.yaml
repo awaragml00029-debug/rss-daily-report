@@ -1,11 +1,10 @@
 # ==========================================
-# RSS Daily Report - 多报告配置
+# RSS Daily Report - 多报告配置示例
 # ==========================================
-# 本配置文件支持多个独立报告，每个报告可以有不同的数据源和关键词
 
 # 全局默认配置（所有报告继承）
 defaults:
-  # 默认列索引映射（从1开始，对应 A=1, B=2...）
+  # 默认列索引（从1开始，对应 A=1, B=2...）
   columns:
     crawl_time: 1      # A列 - 抓取时间
     attribute: 2       # B列 - 属性
@@ -33,27 +32,10 @@ defaults:
     description_max_length: 2500
     show_more_section: true
 
-  # 输出路径配置（所有报告共享基础路径）
+  # 输出路径配置（所有报告共享）
   output:
     daily_path: "reports/{year}/{month}"
     monthly_path: "reports/{year}"
-
-  # 月报生成配置
-  monthly_report:
-    enabled: true
-    generation_days:
-      "01": 31
-      "02": 28
-      "03": 31
-      "04": 30
-      "05": 31
-      "06": 30
-      "07": 31
-      "08": 31
-      "09": 30
-      "10": 31
-      "11": 30
-      "12": 31
 
 # Gemini AI 配置（全局共享）
 gemini:
@@ -112,228 +94,30 @@ report_configs:
       - "tumor"
       - "cancer"
       - "oncology"
-      - "carcinoma"
-      - "leukemia"
-      - "lymphoma"
-
-      # === 免疫相关 ===
-      - "免疫"
-      - "immune"
-      - "immunity"
-      - "immunology"
-      - "免疫微环境"
-      - "tumor microenvironment"
-      - "TME"
-      - "疫苗"
-      - "vaccine"
-      - "衰老"
-      - "aging"
-      - "淋巴"
-      - "lymph"
-      - "微生物"
-      - "microorganism"
-      - "细菌"
-      - "bacteria"
-      - "T细胞"
-      - "T cell"
-      - "B细胞"
-      - "B cell"
-      - "巨噬细胞"
-      - "macrophage"
-      - "树突状细胞"
-      - "dendritic cell"
-      - "NK细胞"
-      - "NK cell"
-      - "单核细胞"
-      - "monocyte"
-      - "线粒体"
-      - "mitochondrion"
-      - "抗原"
-      - "antigen"
-      - "抗体"
-      - "antibody"
-      - "细胞因子"
-      - "cytokine"
-      - "趋化因子"
-      - "chemokine"
-      - "炎症"
-      - "inflammation"
-      - "TLR"
-      - "Toll-like receptor"
-      - "MHC"
-      - "HLA"
-
-      # 正则表达式关键词（匹配词根）
-      - "regex:lymph(o|atic)?"
-      - "regex:micro(b|be|bial|organism)"
-      - "regex:bacter(ia|ial|ium)"
-
-      # === 代谢相关 ===
-      - "代谢"
-      - "metabolism"
-      - "metabolic"
-      - "代谢组"
-      - "metabolome"
-      - "metabolomics"
-
-      # === 心血管/神经系统 ===
-      - "心血管"
-      - "心脏"
-      - "cardiovascular"
-      - "cardiac"
-      - "脑瘤"
-      - "glioma"
-      - "阿尔兹海默"
-      - "老年痴呆"
-      - "Alzheimer"
-      - "神经"
-      - "nervous"
-      - "Neuronal"
-
-      # 正则表达式关键词（匹配词根）
-      - "regex:onco(logy|logist|gene|genic)"
-      - "regex:immuno(logy|therapy|suppression)"
-
-      # === 激酶/耐药 ===
-      - "激酶"
-      - "kinase"
-      - "耐药"
-      - "resistance"
-
-      # === 数据库/资源 ===
-      - "TCGA"
-      - "DepMap"
-      - "depmap"
 
       # === 测序技术 ===
       - "测序"
       - "sequencing"
       - "RNA-seq"
-      - "RNAseq"
-      - "DNA-seq"
-      - "ChIP-seq"
-      - "ATAC-seq"
-      - "Hi-C"
-
-      # === 单细胞 ===
       - "单细胞"
       - "single.cell"
-      - "single-cell"
-      - "scRNA"
-      - "scDNA"
-      - "scATAC"
-      - "10x"
-
-      # === 空间组学 ===
-      - "空间转录组"
-      - "空间组学"
-      - "spatial"
-      - "spatially"
-      - "Visium"
-      - "spatial transcriptomics"
 
       # === 组学 ===
       - "基因组"
       - "转录组"
       - "蛋白质组"
       - "genome"
-      - "genomics"
       - "transcriptome"
-      - "transcriptomics"
-      - "proteome"
-      - "proteomics"
 
-      # === 生物信息 ===
-      - "生物信息"
-      - "生信"
-      - "bioinformatics"
-      - "computational biology"
-
-      # === R语言/工具 ===
-      - "R包"
-      - "R package"
-      - "Bioconductor"
-      - "Seurat"
-      - "Scanpy"
-
-      # === 表观遗传 ===
-      - "表观遗传"
-      - "表观基因组"
-      - "epigenetic"
-      - "epigenome"
-      - "methylation"
-      - "甲基化"
-      - "histone"
-      - "组蛋白"
-
-      # === 分析方法 ===
-      - "differential expression"
-      - "差异表达"
-      - "pathway"
-      - "通路"
-      - "enrichment"
-      - "富集"
-      - "clustering"
-      - "聚类"
-      - "trajectory"
-      - "轨迹"
-
-      # === 肿瘤与基因 ===
-      - "KRAS"
-
-      # === 肠道与微生态 ===
-      - "肠道"
-      - "gut"
-
-      # 正则表达式关键词（匹配词根）
-      - "regex:gut(-?microbiome)?"
-      - "regex:intestin(e|al)"
-
-      # === 结构生物学 / 蛋白质预测 ===
-      - "openfold"
-      - "OpenFold"
-      - "蛋白预测"
-      - "protein prediction"
+      # 更多关键词...
 
     # 排除关键词
     exclude_keywords:
       - "广告"
       - "推广"
       - "聘"
-      - "开课"
       - "课程"
-      - "护理"
-      - "护士"
-      - "更正"
-      - "资金"
       - "培训"
-      - "金融"
-      - "大豆"
-      - "论坛"
-      - "轰动"
-      - "大咖"
-      - "授课"
-      - "大奖"
-      - "大会"
-      - "研讨"
-      - "服务器"
-      - "server"
-      - "指导"
-      - "guidance"
-      - "直播"
-      - "livestream"
-      - "advertisement"
-      - "recruitment"
-      - "hiring"
-      - "job opening"
-      - "correction"
-      - "erratum"
-      - "retraction"
-      - "funding"
-      - "workshop"
-      - "training"
-      - "financial"
-      - "soybean"
 
     # 输出文件名（路径继承 defaults.output）
     output:
@@ -355,10 +139,10 @@ report_configs:
       branch: "main"
       path: "DailyReports/reports"
 
-  # 报告2：医学影像日报（新数据源示例，默认禁用）
+  # 报告2：医学影像日报（新数据源示例）
   imaging:
     name: "医学影像日报"
-    enabled: false  # 默认禁用，需要时设置为 true
+    enabled: false  # 默认禁用，需要时启用
     description: "医学影像、放射学相关的RSS日报"
 
     # Google Sheets 配置
@@ -367,7 +151,6 @@ report_configs:
       sheet_name: "Imaging数据"
 
     # 可以覆盖列配置（如果这个 Sheet 的结构不同）
-    # 如果不覆盖，将使用 defaults.columns
     # columns:
     #   crawl_time: 1
     #   source_name: 2
@@ -388,17 +171,11 @@ report_configs:
       - "ultrasound"
       - "PET"
       - "SPECT"
-      - "X-ray"
-      - "mammography"
-      - "乳腺"
-      - "诊断"
-      - "diagnosis"
 
     exclude_keywords:
       - "广告"
       - "推广"
       - "课程"
-      - "培训"
 
     # 输出文件名
     output:

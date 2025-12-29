@@ -1,0 +1,360 @@
+ # Google Sheets 配置
+google_sheets:
+  spreadsheet_id: "your-spreadsheet-id-here"  # 替换为你的 Sheet ID
+  sheet_name: "RSS处理数据"  # 替换为你的工作表名称
+  
+# 列索引映射（从1开始，对应 A=1, B=2...）
+columns:
+  crawl_time: 1      # A列 - 抓取时间
+  attribute: 2       # B列 - 属性
+  source_name: 3     # C列 - 适名称
+  category: 4        # D列 - 适分类（用于分类识别）
+  title: 5           # E列 - 标题（原始标题，用于关键词筛选和AI总结）
+  link: 6            # F列 - 链接
+  description: 7     # G列 - 描述/摘要
+  publish_time: 8    # H列 - 发布时间
+  author: 9          # I列 - 作者
+  zhtitle: 10        # J列 - 中文标题（用于报告展示，如果为空则使用原始标题）
+
+# 筛选关键词（支持正则表达式，中英文都匹配）
+keywords:
+  # === 肿瘤相关 ===
+  - "肿瘤"
+  - "癌症"
+  - "tumor"
+  - "cancer"
+  - "oncology"
+  - "carcinoma"
+  - "leukemia"
+  - "lymphoma"
+
+  # === 免疫相关 ===
+  - "免疫"
+  - "immune"
+  - "immunity"
+  - "immunology"
+  - "免疫微环境"
+  - "tumor microenvironment"
+  - "TME"
+  - "疫苗"
+  - "vaccine"
+  - "衰老"
+  - "aging"
+  - "淋巴"
+  - "lymph"
+  - "微生物"
+  - "microorganism"
+  - "细菌"
+  - "bacteria"
+  - "T细胞"
+  - "T cell"
+  - "B细胞"
+  - "B cell"
+  - "巨噬细胞"
+  - "macrophage"
+  - "树突状细胞"
+  - "dendritic cell"
+  - "NK细胞"
+  - "NK cell"
+  - "单核细胞"
+  - "monocyte"
+  - "线粒体"
+  - "mitochondrion"
+  
+  - "抗原"
+  - "antigen"
+  - "抗体"
+  - "antibody"
+  - "细胞因子"
+  - "cytokine"
+  - "趋化因子"
+  - "chemokine"
+  - "炎症"
+  - "inflammation"
+  - "TLR"
+  - "Toll-like receptor"
+  - "MHC"
+  - "HLA"
+
+  
+
+  # 正则表达式关键词（匹配词根）
+  - "regex:lymph(o|atic)?"
+  - "regex:micro(b|be|bial|organism)"
+  - "regex:bacter(ia|ial|ium)"
+
+  # === 代谢相关 ===
+  - "代谢"
+  - "metabolism"
+  - "metabolic"
+  - "代谢组"
+  - "metabolome"
+  - "metabolomics"
+
+  # === 心血管/神经系统 ===
+  - "心血管"
+  - "心脏"
+  - "cardiovascular"
+  - "cardiac"
+  - "脑瘤"
+  - "glioma"
+  - "阿尔兹海默"
+  - "老年痴呆"
+  - "Alzheimer"
+  - "神经"
+  - "nervous"
+  - "Neuronal"
+
+    # 正则表达式关键词（匹配词根）
+  - "regex:onco(logy|logist|gene|genic)"
+  - "regex:immuno(logy|therapy|suppression)"
+
+  # === 激酶/耐药 ===
+  - "激酶"
+  - "kinase"
+  - "耐药"
+  - "resistance"
+
+  # === 数据库/资源 ===
+  - "TCGA"
+  - "DepMap"
+  - "depmap"
+
+  # === 测序技术 ===
+  - "测序"
+  - "sequencing"
+  - "RNA-seq"
+  - "RNAseq"
+  - "DNA-seq"
+  - "ChIP-seq"
+  - "ATAC-seq"
+  - "Hi-C"
+
+  # === 单细胞 ===
+  - "单细胞"
+  - "single.cell"
+  - "single-cell"
+  - "scRNA"
+  - "scDNA"
+  - "scATAC"
+  - "10x"
+
+  # === 空间组学 ===
+  - "空间转录组"
+  - "空间组学"
+  - "spatial"
+  - "spatially"
+  - "Visium"
+  - "spatial transcriptomics"
+
+  # === 组学 ===
+  - "基因组"
+  - "转录组"
+  - "蛋白质组"
+  - "genome"
+  - "genomics"
+  - "transcriptome"
+  - "transcriptomics"
+  - "proteome"
+  - "proteomics"
+
+  # === 生物信息 ===
+  - "生物信息"
+  - "生信"
+  - "bioinformatics"
+  - "computational biology"
+
+  # === R语言/工具 ===
+  - "R包"
+  - "R package"
+  - "Bioconductor"
+  - "Seurat"
+  - "Scanpy"
+
+  # === 表观遗传 ===
+  - "表观遗传"
+  - "表观基因组"
+  - "epigenetic"
+  - "epigenome"
+  - "methylation"
+  - "甲基化"
+  - "histone"
+  - "组蛋白"
+
+  # === 分析方法 ===
+  - "differential expression"
+  - "差异表达"
+  - "pathway"
+  - "通路"
+  - "enrichment"
+  - "富集"
+  - "clustering"
+  - "聚类"
+  - "trajectory"
+  - "轨迹"
+
+
+# === 肿瘤与基因 ===
+  - "KRAS"
+
+
+# === 肠道与微生态 ===
+  - "肠道"
+  - "gut"
+
+# 正则表达式关键词（匹配词根）
+  - "regex:gut(-?microbiome)?"
+  - "regex:intestin(e|al)"
+
+
+# === 结构生物学 / 蛋白质预测 ===
+  - "openfold"
+  - "OpenFold"
+  - "蛋白预测"
+  - "protein prediction"
+
+
+
+# 排除关键词（可选，在标题中出现这些词会被过滤）
+exclude_keywords:
+  - "广告"
+  - "推广"
+  - "聘"
+  - "开课"
+  - "课程"
+  - "护理"
+  - "护士"
+  - "更正"
+  - "资金"
+  - "培训"
+  - "金融"
+  - "大豆"
+  - "论坛"
+  - "轰动"
+  - "大咖"
+  - "授课"
+  - "大奖"
+  - "大会"
+  - "研讨"
+  - "服务器"
+  - "server"
+  - "指导"
+  - "guidance"
+  - "直播"
+  - "livestream"
+  - "advertisement"
+  - "recruitment"
+  - "hiring"
+  - "job opening"
+  - "correction"
+  - "erratum"
+  - "retraction"
+  - "funding"
+  - "workshop"
+  - "training"
+  - "financial"
+  - "soybean"
+    
+
+# 来源分类映射配置
+# 格式：标识: [显示名称, 排序, 图标, 描述字段列索引（可选）]
+source_mapping:
+  mpRss: ["公众号", 1, "📰"]
+  Database: ["数据前沿", 2, "🧬"]
+  Journal: ["期刊文章", 3, "🔬"]
+  Rcoding: ["学点生信", 4, "📊"]
+  RnaSeq: ["博客更新", 5, "🧪"]
+  
+  # 后续可继续添加新的来源分类
+  # Pubmed: ["PubMed", 6, "📚"]
+  # Nature: ["Nature系列", 7, "🔬"]
+  # Arxiv: ["arXiv预印本", 8, "📄"]
+  
+  # 未定义的来源会归入这里
+  _default: ["其他来源", 99, "📁"]
+
+# 报告格式配置
+report_format:
+  # 每个来源分类显示的详细条目数（前N条）
+  detail_items_per_source: 10
+  
+  # 描述字段最大长度（字符数，0表示不限制）
+  description_max_length: 2500
+  
+  # 是否在"更多内容"区域显示未展开的条目
+  show_more_section: true
+
+# 输出配置
+output:
+  daily_path: "reports/{year}/{month}"
+  daily_filename: "daily-{date}.md"
+  monthly_path: "reports/{year}"
+  monthly_filename: "monthly-{year}-{month}.md"
+  
+# 月报生成配置
+monthly_report:
+  enabled: true
+  # 在每月最后一天生成（2月按28天）
+  generation_days:
+    "01": 31  # 1月
+    "02": 28  # 2月
+    "03": 31  # 3月
+    "04": 30  # 4月
+    "05": 31  # 5月
+    "06": 30  # 6月
+    "07": 31  # 7月
+    "08": 31  # 8月
+    "09": 30  # 9月
+    "10": 31  # 10月
+    "11": 30  # 11月
+    "12": 31  # 12月
+
+# Gemini AI 配置（用于生成智能总结）
+gemini:
+  enabled: true                              # 是否启用AI总结功能
+  api_url: "https://generativelanguage.googleapis.com/v1beta/models"  # API基础URL（支持自定义，可通过环境变量 GEMINI_API_URL 覆盖以保护隐私）
+  model: "gemini-2.5-flash-lite"             # 使用的模型
+  temperature: 0.7                            # 生成温度（0-1，越高越有创意）
+  max_tokens: 2500                            # 每次总结的最大token数
+  language: "zh-CN"                           # 输出语言
+  max_items_per_source: 25                   # 每个来源最多发送的条目数（控制成本）
+
+  # AI 总结提示词模板
+  prompt_template: |
+    你是一位经验丰富的科研信息编辑，擅长信息收集、去重和内容校对。请用简练专业的语言总结以下来自"{source_name}"的文章。
+
+    文章列表：
+    {articles}
+
+    请生成精炼总结（最多250字）：
+
+    **今日焦点**：
+    一句话概括最值得关注的1-2个突破或创新
+
+    **主要方向**：
+    - [2-3个具体研究方向，直接说做什么]
+
+    **技术亮点**：
+    - [1-2个方法或技术的创新点]
+
+    要求：
+    1. 去除重复内容，仅保留最有价值的信息
+    2. 突出"首次"、"新型"、"突破"等关键进展
+    3. 用具体的研究对象和方法，避免泛泛而谈
+    4. 语言简洁直接，不要铺垫
+    5. 严格控制在250字以内
+
+# Hugo 博客集成配置
+hugo:
+  enabled: true                               # 是否启用Hugo推送
+  repo: "ixxmu/ixxmu.github.io.source"       # Hugo仓库
+  branch: "FigureYY"                          # 目标分支
+  path: "content/posts/DailyReports"          # 报告存放路径
+  author: "oknet"                             # Front Matter作者
+
+# 备份仓库配置
+backup:
+  enabled: true                               # 是否启用备份
+  repo: "ixxmu/duty_bk"                       # 备份仓库
+  branch: "main"                              # 目标分支（通常是main或master）
+  path: "DailyReports/reports"                # 备份路径

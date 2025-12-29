@@ -36,10 +36,17 @@ except ImportError:
 
 class RSSReportGenerator:
     """RSS 报告生成器"""
-    
-    def __init__(self, config_path: str = "config.yaml"):
-        """初始化生成器"""
-        self.config = self._load_config(config_path)
+
+    def __init__(self, config_path: str = "config.yaml", config_name: str = None):
+        """
+        初始化生成器
+
+        Args:
+            config_path: 配置文件路径
+            config_name: 报告配置名称（用于多报告配置）
+        """
+        self.config_name = config_name
+        self.config = self._load_config(config_path, config_name)
         self.client = self._authenticate_google_sheets()
         self.sheet = None
         self.gemini_enabled = False
@@ -49,24 +56,115 @@ class RSSReportGenerator:
         # 初始化 Gemini AI
         self._init_gemini()
         
-    def _load_config(self, config_path: str) -> Dict[str, Any]:
-        """加载配置文件"""
+    def _load_config(self, config_path: str, config_name: str = None) -> Dict[str, Any]:
+        """
+        加载配置文件
+
+        Args:
+            config_path: 配置文件路径
+            config_name: 报告配置名称（用于多报告配置）
+
+        Returns:
+            合并后的配置字典
+        """
         # 智能查找配置文件
         possible_paths = [
             config_path,                                    # 当前目录
             os.path.join('..', config_path),               # 上级目录
             os.path.join(os.path.dirname(__file__), '..', config_path),  # 脚本的上级目录
         ]
-        
+
+        raw_config = None
         for path in possible_paths:
             if os.path.exists(path):
                 with open(path, 'r', encoding='utf-8') as f:
-                    return yaml.safe_load(f)
-        
-        # 如果都找不到，抛出错误
-        raise FileNotFoundError(
-            f"找不到配置文件 '{config_path}'。尝试过的路径: {possible_paths}"
+                    raw_config = yaml.safe_load(f)
+                break
+
+        if not raw_config:
+            # 如果都找不到，抛出错误
+            raise FileNotFoundError(
+                f"找不到配置文件 '{config_path}'。尝试过的路径: {possible_paths}"
+            )
+
+        # 如果指定了 config_name，使用多报告配置模式
+        if config_name:
+            return self._merge_multi_config(raw_config, config_name)
+
+        # 否则，检查是否有 report_configs（向后兼容）
+        if 'report_configs' not in raw_config:
+            # 旧的单配置模式，直接返回
+            return raw_config
+
+        # 新配置但未指定 config_name，抛出错误
+        raise ValueError(
+            "配置文件包含多报告配置，请使用 --config-name 参数指定报告名称\n"
+            f"可用的报告: {', '.join(raw_config['report_configs'].keys())}"
         )
+
+    def _merge_multi_config(self, raw_config: Dict[str, Any], config_name: str) -> Dict[str, Any]:
+        """
+        合并多报告配置
+
+        Args:
+            raw_config: 原始配置字典
+            config_name: 报告配置名称
+
+        Returns:
+            合并后的配置字典
+        """
+        # 检查报告配置是否存在
+        report_configs = raw_config.get('report_configs', {})
+        if config_name not in report_configs:
+            available = ', '.join(report_configs.keys())
+            raise ValueError(
+                f"未找到报告配置 '{config_name}'。\n"
+                f"可用的报告: {available}"
+            )
+
+        report_config = report_configs[config_name]
+
+        # 检查是否启用
+        if not report_config.get('enabled', True):
+            raise ValueError(f"报告配置 '{config_name}' 已禁用")
+
+        # 获取默认配置
+        defaults = raw_config.get('defaults', {})
+
+        # 合并配置（报告配置优先级高于默认配置）
+        merged = {}
+
+        # 1. 复制全局配置（gemini 等）
+        for key in ['gemini']:
+            if key in raw_config:
+                merged[key] = raw_config[key]
+
+        # 2. 合并 defaults 和报告配置
+        # 对于嵌套字典，需要深度合并
+        def deep_merge(base: dict, override: dict) -> dict:
+            """深度合并两个字典"""
+            result = base.copy()
+            for key, value in override.items():
+                if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                    result[key] = deep_merge(result[key], value)
+                else:
+                    result[key] = value
+            return result
+
+        # 合并 defaults
+        for key, value in defaults.items():
+            merged[key] = value
+
+        # 合并报告特定配置（覆盖 defaults）
+        merged = deep_merge(merged, report_config)
+
+        # 3. 添加报告名称到配置中
+        merged['report_name'] = config_name
+        merged['report_display_name'] = report_config.get('name', config_name)
+
+        print(f"📋 已加载报告配置: {merged['report_display_name']}")
+
+        return merged
     
     def _authenticate_google_sheets(self) -> gspread.Client:
         """认证 Google Sheets"""
@@ -257,12 +355,30 @@ class RSSReportGenerator:
 
     def connect_sheet(self) -> gspread.Worksheet:
         """连接到指定的 Google Sheet"""
-        spreadsheet_id = os.getenv('SHEET_ID') or self.config['google_sheets']['spreadsheet_id']
-        sheet_name = self.config['google_sheets']['sheet_name']
+        google_sheets_config = self.config.get('google_sheets', {})
+
+        # 支持多报告配置：优先使用 spreadsheet_env 指定的环境变量
+        if 'spreadsheet_env' in google_sheets_config:
+            env_var_name = google_sheets_config['spreadsheet_env']
+            spreadsheet_id = os.getenv(env_var_name)
+            if not spreadsheet_id:
+                raise ValueError(
+                    f"未找到环境变量 '{env_var_name}'。\n"
+                    f"请在 GitHub Secrets 或本地环境中设置该变量。"
+                )
+            print(f"📊 使用环境变量 {env_var_name} 连接 Google Sheets")
+        else:
+            # 向后兼容：使用 SHEET_ID 或配置中的 spreadsheet_id
+            spreadsheet_id = os.getenv('SHEET_ID') or google_sheets_config.get('spreadsheet_id')
+            if not spreadsheet_id:
+                raise ValueError("未找到 Google Sheets ID（需要 SHEET_ID 环境变量或配置文件中的 spreadsheet_id）")
+
+        sheet_name = google_sheets_config['sheet_name']
 
         spreadsheet = self.client.open_by_key(spreadsheet_id)
         self.sheet = spreadsheet.worksheet(sheet_name)
 
+        print(f"✅ 已连接到工作表: {sheet_name}")
         return self.sheet
 
     def cleanup_old_data(self, days: int = 15):
@@ -339,7 +455,14 @@ class RSSReportGenerator:
             print(f"  📦 将 {len(rows_to_delete)} 行压缩为 {len(ranges_to_delete)} 个删除范围")
 
             # 使用 batch_update 批量删除（从后往前，避免索引变化）
-            spreadsheet = self.client.open_by_key(os.getenv('SHEET_ID') or self.config['google_sheets']['spreadsheet_id'])
+            # 获取 spreadsheet_id（支持多报告配置）
+            google_sheets_config = self.config.get('google_sheets', {})
+            if 'spreadsheet_env' in google_sheets_config:
+                spreadsheet_id = os.getenv(google_sheets_config['spreadsheet_env'])
+            else:
+                spreadsheet_id = os.getenv('SHEET_ID') or google_sheets_config.get('spreadsheet_id')
+
+            spreadsheet = self.client.open_by_key(spreadsheet_id)
 
             # 批量删除请求（每批最多 100 个操作以避免超出限制）
             batch_size = 100
@@ -1789,13 +1912,23 @@ draft: no
 def main():
     """主函数"""
     import argparse
-    
-    parser = argparse.ArgumentParser(description='RSS Daily Report Generator')
+
+    parser = argparse.ArgumentParser(description='RSS Daily Report Generator - 支持多报告配置')
     parser.add_argument(
         '--mode',
         choices=['daily', 'monthly'],
         default='daily',
         help='生成模式：daily（每日）或 monthly（每月）'
+    )
+    parser.add_argument(
+        '--config-name',
+        dest='config_name',
+        help='报告配置名称（用于多报告配置，如 bioinfo, imaging）'
+    )
+    parser.add_argument(
+        '--config',
+        default='config.yaml',
+        help='配置文件路径（默认: config.yaml）'
     )
     parser.add_argument(
         '--date',
@@ -1811,12 +1944,19 @@ def main():
         type=int,
         help='指定月份，仅用于 monthly 模式'
     )
-    
+
     args = parser.parse_args()
-    
+
     # 创建生成器
-    generator = RSSReportGenerator()
-    
+    try:
+        generator = RSSReportGenerator(
+            config_path=args.config,
+            config_name=args.config_name
+        )
+    except ValueError as e:
+        print(f"❌ 配置错误: {str(e)}", file=sys.stderr)
+        sys.exit(1)
+
     try:
         if args.mode == 'daily':
             # 每日报告
@@ -1824,11 +1964,11 @@ def main():
             if args.date:
                 target_date = datetime.strptime(args.date, '%Y-%m-%d')
             generator.run_daily(target_date)
-            
+
         elif args.mode == 'monthly':
             # 月度报告
             generator.run_monthly(args.year, args.month)
-    
+
     except Exception as e:
         print(f"❌ 错误: {str(e)}", file=sys.stderr)
         import traceback
